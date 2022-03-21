@@ -1,9 +1,6 @@
-import os
 import numpy as np
-import time
 import sys
-import csv
-import cv2
+
 import matplotlib.pyplot as plt
 
 import torch
@@ -32,26 +29,37 @@ import pickle
 use_gpu = torch.cuda.is_available()
 
 
-def load_data(path, dataset_size, with_gan=False):
+def load_data(path, dataset_size=None, with_gan=False):
     # add data augmentations transforms here
-    TRAIN_WITH_GAN_FILENAME = "train_preprocessed_subset_{}_with_gan.csv".format(dataset_size)
-    TRAIN_WITHOUT_GAN_FILENAME = "train_preprocessed_subset_{}.csv".format(dataset_size)
+    # TRAIN_WITH_GAN_FILENAME = "train_preprocessed_subset_{}_with_gan.csv".format(dataset_size)
+    # TRAIN_WITHOUT_GAN_FILENAME = "train_preprocessed_subset_{}.csv".format(dataset_size)
 
     transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
                                                 xrv.datasets.XRayResizer(224)])
     # replace the paths for the dataset here
-    train_filename = TRAIN_WITH_GAN_FILENAME if with_gan else TRAIN_WITHOUT_GAN_FILENAME
+    # train_filename = TRAIN_WITH_GAN_FILENAME if with_gan else TRAIN_WITHOUT_GAN_FILENAME
+    train_filename = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/metadata.csv'
 
     print("\nUsing labels: {}".format(train_filename))
-    sys.stdout.flush()
+    # sys.stdout.flush()
 
-    d_chex_train = xrv.datasets.CheX_Dataset(imgpath=path,
-                                       csvpath=path + train_filename,
-                                       transform=transform, views=["PA", "AP"], unique_patients=False)
-    d_chex_test = xrv.datasets.CheX_Dataset(imgpath=path,
-                                       csvpath=path + "test_train_preprocessed.csv",
-                                       transform=transform, views=["PA", "AP"], unique_patients=False)
-    return d_chex_train, d_chex_test
+    # d_chex_train = xrv.datasets.CheX_Dataset(imgpath=path,
+    #                                    csvpath=train_filename,
+    #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
+
+    ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
+                                       csvpath=train_filename, transform=transform)
+
+    len_train, len_test = 0.8 (len(ds_covid)
+    ds_covid_train, ds_covid_test = randomsplit(ds_covid, [])  
+    # d_chex_test = xrv.datasets.CheX_Dataset(imgpath=path,
+    #                                    csvpath=path + "test_train_preprocessed.csv",
+    #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
+
+    # d_chex_test = xrv.datasets.CheX_Dataset(imgpath=path,
+    #                                    csvpath=path + "test_train_preprocessed.csv",
+    #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
+    return d_covid
 
 def get_model():
     model = xrv.models.DenseNet(num_classes=13)
@@ -207,3 +215,7 @@ def testing(model, test_loader, nnClassCount, class_names):
 
     # return outGT, outPRED
 
+
+if __name__ == '__main__':
+    d_covid = load_data(path='/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images')
+    print(d_covid[0])
