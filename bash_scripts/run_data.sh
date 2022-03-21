@@ -21,7 +21,7 @@ curl 'https://storage.googleapis.com/kaggle-data-sets/17810/23812/bundle/archive
   -H 'referer: https://www.kaggle.com/' \
   -H 'accept-language: en-GB,en-US;q=0.9,en;q=0.8' \
   --compressed -o data.zip
-unzip data.zip -d RSNA_Pneumonia
+unzip data.zip -d RSNA_Pneumonia -o
 rm data.zip
 
 cd ..
