@@ -389,6 +389,7 @@ class BalancingGAN:
             layers_d[l].set_weights( layers_r[l].get_weights() )
 
         # Organize multivariate distribution
+        print("Organize multivariate distribution")
         if not multivariate_prelearnt:
             print("BAGAN: computing multivariate")
             self.covariances = []
@@ -648,6 +649,7 @@ class BalancingGAN:
             self.reconstructor.save(reconstructor_fname)
 
     def load_models(self, fname_generator, fname_discriminator, fname_reconstructor, bg_train=None):
+        print("load_models")
         self.init_autoenc(bg_train, gen_fname=fname_generator, rec_fname=fname_reconstructor)
         self.discriminator.load_weights(fname_discriminator)
 

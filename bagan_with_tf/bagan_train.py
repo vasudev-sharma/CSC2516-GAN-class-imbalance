@@ -110,15 +110,21 @@ if __name__ == '__main__':
     img_samples = defaultdict(list)
 
     # For all possible minority classes.
+    # GABRIEL: min_classes is the minority class we want to bring balance to
     target_classes = np.array(range(len(classes)))
+    print("GABRIEL, target_classes: ", target_classes)
     if opt_class >= 0:
         min_classes = np.array([opt_class])
     else:
         min_classes = target_classes
+        
+    print("GABRIEL, min_classes: ")
+    print(min_classes)
 
     for c in min_classes:
         # If unbalance is 1.0, then the same BAGAN model can be applied to every class because
         # we do not drop any instance at training time.
+        # GABRIEL: what does it mean unbalance=1.0?
         if unbalance == 1.0 and c > 0 and (
             os.path.exists("{}/class_0_score.csv".format(res_dir, c)) and
             os.path.exists("{}/class_0_discriminator.h5".format(res_dir, c)) and
@@ -131,6 +137,7 @@ if __name__ == '__main__':
             os.symlink("{}/class_0_generator.h5".format(res_dir), "{}/class_{}_generator.h5".format(res_dir, c))
             os.symlink("{}/class_0_reconstructor.h5".format(res_dir), "{}/class_{}_reconstructor.h5".format(res_dir, c))
 
+        # GABRIEL: what is this for?
         # Unbalance the training set.
         bg_train_partial = BatchGenerator(BatchGenerator.TRAIN, batch_size,
                                           class_to_prune=c, unbalance=unbalance, dataset=dataset_name)
