@@ -28,6 +28,7 @@ if __name__ == '__main__':
     argParser.add_option("-u", "--unbalance", default=0.2,
                   action="store", type="float", dest="unbalance",
                   help="Unbalance factor u. The minority class has at most u * otherClassSamples instances.")
+    # GABRIEL: check number of images assigned to minority class.
 
     argParser.add_option("-s", "--random_seed", default=0,
                   action="store", type="int", dest="seed",
@@ -36,10 +37,12 @@ if __name__ == '__main__':
     argParser.add_option("-d", "--sampling_mode_for_discriminator", default="uniform",
                   action="store", type="string", dest="dratio_mode",
                   help="Dratio sampling mode (\"uniform\",\"rebalance\").")
-    
+    # GABRIEL: what is uniform vs rebalance?
+
     argParser.add_option("-g", "--sampling_mode_for_generator", default="uniform",
                   action="store", type="string", dest="gratio_mode",
                   help="Gratio sampling mode (\"uniform\",\"rebalance\").")
+    # GABRIEL: what is uniform vs rebalance?
 
     argParser.add_option("-e", "--epochs", default=3,
                   action="store", type="int", dest="epochs",
@@ -52,14 +55,19 @@ if __name__ == '__main__':
     argParser.add_option("-c", "--target_class", default=-1,
                   action="store", type="int", dest="target_class",
                   help="If greater or equal to 0, model trained only for the specified class.")
+    # GABRIEL: unsure how to control the target class
+    # -1: does the model is trained for all the targets?
 
     argParser.add_option("-D", "--dataset", default='MNIST',
                   action="store", type="string", dest="dataset",
                   help="Either 'MNIST', or 'CIFAR10'.")
+    # GABRIEL: how to input a differente dataset?
 
     (options, args) = argParser.parse_args()
 
     assert (options.unbalance <= 1.0 and options.unbalance > 0.0), "Data unbalance factor must be > 0 and <= 1"
+    # GABRIEL: I think a factor closer to 0 means data contains more unbalance,
+    # closer 1 data is balanced
 
     print("Executing BAGAN.")
 
@@ -71,11 +79,11 @@ if __name__ == '__main__':
     gan_epochs = options.epochs
     adam_lr = options.adam_lr
     opt_class = options.target_class
-    batch_size = 128
+    batch_size = 128  # GABRIEL: minibatch
     dataset_name = options.dataset
 
     # Set channels for mnist.
-    channels = 1 if dataset_name == 'MNIST' else 3
+    channels = 1 if dataset_name == 'MNIST' else 3  # Gabriel: what is 'channels' for?
     print('Using dataset: ', dataset_name)
 
     # Result directory
@@ -95,13 +103,15 @@ if __name__ == '__main__':
     print("input data loaded...")
 
     shape = bg_train_full.get_image_shape()
+    print("GABRIEL: shape: ", shape)
 
-    min_latent_res = shape[-1]
+    min_latent_res = shape[-1]  # GABRIEL: what is min_latent_res used for?
     while min_latent_res > 8:
         min_latent_res = min_latent_res / 2
     min_latent_res = int(min_latent_res)
 
     classes = bg_train_full.get_label_table()
+    print("GABRIEL: classes: ", classes)
 
     # Initialize statistics information
     gan_train_losses = defaultdict(list)
@@ -113,7 +123,7 @@ if __name__ == '__main__':
     # GABRIEL: min_classes is the minority class we want to bring balance to
     target_classes = np.array(range(len(classes)))
     print("GABRIEL, target_classes: ", target_classes)
-    if opt_class >= 0:
+    if opt_class >= 0:  # GABRIEL: opt_class comes from options.target_class
         min_classes = np.array([opt_class])
     else:
         min_classes = target_classes
@@ -122,8 +132,11 @@ if __name__ == '__main__':
     print(min_classes)
 
     for c in min_classes:
-        # If unbalance is 1.0, then the same BAGAN model can be applied to every class because
-        # we do not drop any instance at training time.
+        # UPDATE: Not sure if the following is still true:
+        # If unbalance is 1.0, then the same BAGAN model can be applied to
+        # every class because we do not drop any instance when the model was
+        # trained.
+        #
         # GABRIEL: what does it mean unbalance=1.0?
         if unbalance == 1.0 and c > 0 and (
             os.path.exists("{}/class_0_score.csv".format(res_dir, c)) and
@@ -137,10 +150,11 @@ if __name__ == '__main__':
             os.symlink("{}/class_0_generator.h5".format(res_dir), "{}/class_{}_generator.h5".format(res_dir, c))
             os.symlink("{}/class_0_reconstructor.h5".format(res_dir), "{}/class_{}_reconstructor.h5".format(res_dir, c))
 
-        # GABRIEL: what is this for?
-        # Unbalance the training set.
+        # GABRIEL: what is bg_train_partial for?
+        # UPDATE: Not sure the following is true -> Unbalance the training set.
         bg_train_partial = BatchGenerator(BatchGenerator.TRAIN, batch_size,
                                           class_to_prune=c, unbalance=unbalance, dataset=dataset_name)
+        print("GABRIEL: bg_train_partial: ", bg_train_partial)
 
         # Train the model (or reload it if already available
         if not (
@@ -152,9 +166,12 @@ if __name__ == '__main__':
             # Training required
             print("Required GAN for class {}".format(c))
 
+            # GABRIEL: what is per_class_count
             print('Class counters: ', bg_train_partial.per_class_count)
 
             # Train GAN to balance the data
+            # GABRIEL: 'bagan' comes from 'import'
+            # GABRIEL: target_classes VS c ??
             gan = bagan.BalancingGAN(
                 target_classes, c, dratio_mode=dratio_mode, gratio_mode=gratio_mode,
                 adam_lr=adam_lr, res_dir=res_dir, image_shape=shape, min_latent_res=min_latent_res
@@ -174,12 +191,11 @@ if __name__ == '__main__':
                 "{}/class_{}_generator.h5".format(res_dir, c),
                 "{}/class_{}_discriminator.h5".format(res_dir, c),
                 "{}/class_{}_reconstructor.h5".format(res_dir, c),
-                bg_train=bg_train_partial  # This is required to initialize the per-class mean and covariance matrix
+                bg_train=bg_train_partial  # GABRIEL: This is required to initialize the per-class mean and covariance matrix
             )
 
         # Sample and save images
+        #  GABRIEL: what is generate_samples for?
         img_samples['class_{}'.format(c)] = gan.generate_samples(c=c, samples=10)
 
         save_image_array(np.array([img_samples['class_{}'.format(c)]]), '{}/plot_class_{}.png'.format(res_dir, c))
-
-
