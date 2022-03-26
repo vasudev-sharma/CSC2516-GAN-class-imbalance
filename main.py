@@ -69,7 +69,11 @@ elif user == "neha":
     output_path = "/local/nhulkund/UROP/6.819FinalProjectRAMP/outputs"
     model_path = output_path
 elif user == "vasu":
-    data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
+    # data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
+    # output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
+    # model_path = output_path
+    
+    data_path = "/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_images"
     output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
     model_path = output_path
     

@@ -29,3 +29,4 @@ cd ..
 
 # Install python dependecies
 pip install torchxrayvision
+pip install pydicom
