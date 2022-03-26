@@ -22,7 +22,7 @@ curl 'https://storage.googleapis.com/kaggle-competitions-data/kaggle-v2/10338/86
   -H 'referer: https://www.kaggle.com/' \
   -H 'accept-language: en-GB,en-US;q=0.9,en;q=0.8' \
   --compressed -o data.zip
-unzip data.zip -d RSNA_Pneumonia -o
+unzip data.zip -d RSNA_Pneumonia 
 rm data.zip
 
 cd ..
