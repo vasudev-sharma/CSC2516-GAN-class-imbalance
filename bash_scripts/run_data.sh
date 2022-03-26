@@ -28,3 +28,4 @@ rm data.zip
 cd ..
 
 # Install python dependecies
+pip install torchxrayvision
