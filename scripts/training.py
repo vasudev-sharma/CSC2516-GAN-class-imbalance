@@ -1,6 +1,6 @@
 import numpy as np
 import sys
-
+from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 import torch
@@ -69,8 +69,8 @@ def load_data(path, dataset_size=None, with_gan=False):
     #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
     return ds_covid_train, ds_covid_test
 
-def get_model():
-    model = xrv.models.DenseNet(num_classes=13)
+def get_model(num_classes):
+    model = xrv.models.DenseNet(num_classes=num_classes)
     print(model.classifier)
     return model
 
@@ -108,7 +108,7 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
         model.to("cuda:0")
         train_loss = 0
         count = 0
-        for data_all in train_loader:
+        for idx, data_all in enumerate(tqdm(train_loader)):
             count += 1
             # if count % 100 == 0:
             #     print("Count {}".format(count))
@@ -128,7 +128,7 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
         model.eval()
         valid_loss = 0
         with torch.no_grad():
-            for data_all in valid_loader:
+            for data_all in tqdm(valid_loader):
                 data = data_all['img']
                 target = data_all['lab']
                 data = data.to("cuda:0")
