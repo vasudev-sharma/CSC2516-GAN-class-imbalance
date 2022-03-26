@@ -50,8 +50,9 @@ def load_data(path, dataset_size=None, with_gan=False):
     ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
                                        csvpath=train_filename, transform=transform)
 
-    len_train, len_test = 0.8 (len(ds_covid)
-    ds_covid_train, ds_covid_test = randomsplit(ds_covid, [])  
+    len_train = int(0.8 * (len(ds_covid)))
+    len_test = len(ds_covid) - len_train
+    ds_covid_train, ds_covid_test = random_split(ds_covid, [len_train, len_test])  
     # d_chex_test = xrv.datasets.CheX_Dataset(imgpath=path,
     #                                    csvpath=path + "test_train_preprocessed.csv",
     #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
@@ -59,7 +60,7 @@ def load_data(path, dataset_size=None, with_gan=False):
     # d_chex_test = xrv.datasets.CheX_Dataset(imgpath=path,
     #                                    csvpath=path + "test_train_preprocessed.csv",
     #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
-    return d_covid
+    return ds_covid_train, ds_covid_test
 
 def get_model():
     model = xrv.models.DenseNet(num_classes=13)
@@ -217,5 +218,5 @@ def testing(model, test_loader, nnClassCount, class_names):
 
 
 if __name__ == '__main__':
-    d_covid = load_data(path='/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images')
-    print(d_covid[0])
+    ds_covid_train, ds_covid_test = load_data(path='/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images')
+    print(ds_covid_train[0])

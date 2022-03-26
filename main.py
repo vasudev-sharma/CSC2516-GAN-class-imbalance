@@ -68,6 +68,11 @@ elif user == "neha":
     data_path = "/local/nhulkund/UROP/Chexpert/data/CheXpert-v1.0-small/train.csv"
     output_path = "/local/nhulkund/UROP/6.819FinalProjectRAMP/outputs"
     model_path = output_path
+elif user == "vasu":
+    data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
+    output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
+    model_path = output_path
+    
 else:
     raise Exception("Invalid user")
 
