@@ -35,7 +35,7 @@ import pickle
 
 import pandas as pd
 
-from training import load_data, get_model, training, testing
+from scripts.training import load_data, get_model, training, testing
 
 
 use_gpu = torch.cuda.is_available()
