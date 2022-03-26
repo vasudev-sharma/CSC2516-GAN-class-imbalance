@@ -38,7 +38,12 @@ def load_data(path, dataset_size=None, with_gan=False):
                                                 xrv.datasets.XRayResizer(224)])
     # replace the paths for the dataset here
     # train_filename = TRAIN_WITH_GAN_FILENAME if with_gan else TRAIN_WITHOUT_GAN_FILENAME
-    train_filename = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/metadata.csv'
+
+    # COVID train
+    # train_filename = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/metadata.csv'
+
+    # Train file RSNA
+    train_filename = '/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/RSNA_Pneumonia/stage_2_train_labels.csv'
 
     print("\nUsing labels: {}".format(train_filename))
     # sys.stdout.flush()
@@ -48,6 +53,8 @@ def load_data(path, dataset_size=None, with_gan=False):
     #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
 
     ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
+                                       csvpath=train_filename, transform=transform)
+    ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
                                        csvpath=train_filename, transform=transform)
 
     len_train = int(0.8 * (len(ds_covid)))
@@ -218,5 +225,7 @@ def testing(model, test_loader, nnClassCount, class_names):
 
 
 if __name__ == '__main__':
-    ds_covid_train, ds_covid_test = load_data(path='/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images')
+    path_covid = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images'
+    path_rsna = '/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/RSNA_Pneumonia/stage_2_train_images'
+    ds_covid_train, ds_covid_test = load_data(path=path_rsna)
     print(ds_covid_train[0])
