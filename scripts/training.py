@@ -40,10 +40,10 @@ def load_data(path, dataset_size=None, with_gan=False):
     # train_filename = TRAIN_WITH_GAN_FILENAME if with_gan else TRAIN_WITHOUT_GAN_FILENAME
 
     # COVID train
-    # train_filename = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/metadata.csv'
+    train_filename = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/metadata.csv'
 
     # Train file RSNA
-    train_filename = '/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_labels.csv'
+    # train_filename = '/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_labels.csv'
 
     print("\nUsing labels: {}".format(train_filename))
     # sys.stdout.flush()
@@ -52,10 +52,11 @@ def load_data(path, dataset_size=None, with_gan=False):
     #                                    csvpath=train_filename,
     #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
 
-    # ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
-    #                                    csvpath=train_filename, transform=transform)
-    ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
-                                       csvpath=train_filename, transform=transform, extension='.dcm')
+    ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
+                                       csvpath=train_filename, transform=transform)
+                                       
+    # ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
+                                    #    csvpath=train_filename, transform=transform, extension='.dcm')
 
     len_train = int(0.8 * (len(ds_covid)))
     len_test = len(ds_covid) - len_train
