@@ -70,13 +70,13 @@ elif user == "neha":
     output_path = "/local/nhulkund/UROP/6.819FinalProjectRAMP/outputs"
     model_path = output_path
 elif user == "vasu":
-    # data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
-    # output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
-    # model_path = output_path
-    
-    data_path = "/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_images"
+    data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
     output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
     model_path = output_path
+    
+    # data_path = "/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_images"
+    # output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
+    # model_path = output_path
     
 else:
     raise Exception("Invalid user")
@@ -135,7 +135,12 @@ print("Optimizer: {}".format(optimizer))
 print("WITH GAN DATA: {}".format(with_gan))
 print("Train dataset size: {}".format(len(dataset_train)))
 
-model = get_model(num_classes=25)
+if FLAGS.dataset == 'RSNA':
+    num_classes = 25
+else:
+    num_classes = 2
+
+model = get_model(num_classes=num_classes)
 
 if not skip_training:
     print("TRAINING")
@@ -165,15 +170,16 @@ sys.stdout.flush()
 
 model.load_state_dict(torch.load(model_path + model_name))
 
-class_names=['Enlarged Cardiomediastinum', 'Cardiomegaly',
-       'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia',
-       'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other',
-       'Fracture', 'Support Devices']
+# class_names=['Enlarged Cardiomediastinum', 'Cardiomegaly',
+#        'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia',
+#        'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other',
+#        'Fracture', 'Support Devices']
 
 
 # class_names = ['Normal', 'Pneumonia']
 
-class_names = list(map(str, range(25)))
+class_names = list(map(str, range(num_classes)))
+
 
 print("TESTING")
 sys.stdout.flush()
