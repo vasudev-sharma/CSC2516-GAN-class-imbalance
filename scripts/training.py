@@ -167,7 +167,10 @@ def computeAUROC(dataGT, dataPRED, classCount):
         try:
             outAUROC.append(roc_auc_score(datanpGT[:, i], datanpPRED[:, i]))
         except ValueError:
-            print(roc_auc_score(datanpGT[:, i], datanpPRED[:, i]))
+            # print(roc_auc_score(datanpGT[:, i], datanpPRED[:, i]))
+            # TODO: Handle ROCAUC for only one class
+            outAUROC.append(0)
+            # pass
     return outAUROC
 
 
