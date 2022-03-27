@@ -5,12 +5,11 @@ git clone https://github.com/ieee8023/covid-chestxray-dataset.git
 mv covid-chestxray-dataset/* . & rm covid-chestxray-dataset
 cd ..
 
-# Download RSNA dataset
-curl 'https://storage.googleapis.com/kaggle-competitions-data/kaggle-v2/10338/862042/bundle/archive.zip?GoogleAccessId=web-data@kaggle-161607.iam.gserviceaccount.com&Expires=1648341989&Signature=MIKaXDiRHbnCPdirs%2FW7VxAY53MDxEi2NNMFB72EKMtKARq%2BZ8jNwX%2FYVR3P%2BqlWiYA7tmmrLFHvCWey2tPT6WnUGDwo6n2FbRF7hRmGEnsiiP6jKtFq%2FFBz2mdHKSVE%2FGlvaSBV7%2FufHXphfXB1Ol%2Ff75R0HcN%2BAw58otztJD5k6KazmVE63ih6BnxjEt%2F1HuZEx3ZzjHhkqBu4adqQA6J3wsLjNc8oumJUKuZUE95fKl89SeNamZFxKHzj02IRMDF1osjCrTz95xHhqlPGeHt%2BmYItcAs%2BstQA8qvl9%2BhZtBfT2cQNoB0PgItrsbdIiPEAoAtOjSIqmGSYYNooLQ%3D%3D&response-content-disposition=attachment%3B+filename%3Drsna-pneumonia-detection-challenge.zip' \
+# Download RSNA dataset: 
+curl 'https://storage.googleapis.com/kaggle-competitions-data/kaggle-v2/10338/862042/bundle/archive.zip?GoogleAccessId=web-data@kaggle-161607.iam.gserviceaccount.com&Expires=1648620756&Signature=r48LMathzZauJ1hRKjcwAU71s6%2B4OC7iE5zMVLd3QePhfCNQDfga0wt8P6dgYffuzdhGA%2Fa%2Bc%2Fc1zNnO76N%2F5Rk17HMQyeWB4yrHpexcdODTAbtv2cvpUr%2BqeUHjpL2o2WWBDA8K2L644XJi8tT2TgNzswJZI1AU5UJMik5FwuYUsjJBJeTgBEjNcw7MHxHuE3Kvq%2FPggZkS8RnluHgE%2B8jmIrwGPKODzXidNtMFbVt5GCV2W4Da6eFhDl2ciTjaeplJ7qSz4pkbiWjgzBw7yry%2B6wxjsJbiO6RsKkIb84DgONUO2JjdQaj%2FFMwf4lu9QUqXc6%2FJCmwd2RovUgY%2B0g%3D%3D&response-content-disposition=attachment%3B+filename%3Drsna-pneumonia-detection-challenge.zip' \
   -H 'authority: storage.googleapis.com' \
-  -H 'cache-control: max-age=0' \
   -H 'upgrade-insecure-requests: 1' \
-  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.74 Safari/537.36' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.83 Safari/537.36' \
   -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9' \
   -H 'sec-fetch-site: cross-site' \
   -H 'sec-fetch-mode: navigate' \

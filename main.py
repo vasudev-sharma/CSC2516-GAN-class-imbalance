@@ -52,6 +52,7 @@ parser.add_argument('--user', type=str, required=True)
 parser.add_argument('--with_gan', type=bool, required=True)
 parser.add_argument('--dataset_size', type=int, required=True)
 parser.add_argument('--skip_training', type=bool, required=False)
+parser.add_argument('--dataset', help = 'RSNA, COVID', type=str, required=False)
 FLAGS = parser.parse_args()
 
 idx = FLAGS.idx
@@ -134,13 +135,13 @@ print("Optimizer: {}".format(optimizer))
 print("WITH GAN DATA: {}".format(with_gan))
 print("Train dataset size: {}".format(len(dataset_train)))
 
-model = get_model()
+model = get_model(num_classes=25)
 
 if not skip_training:
     print("TRAINING")
     best_valid_loss, best_epoch = training(
         model=model,
-        num_epochs=10,
+        num_epochs=1,
         model_path=model_path,
         model_name=model_name,
         train_loader=dataLoaderTrain,
@@ -168,6 +169,11 @@ class_names=['Enlarged Cardiomediastinum', 'Cardiomegaly',
        'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia',
        'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other',
        'Fracture', 'Support Devices']
+
+
+# class_names = ['Normal', 'Pneumonia']
+
+class_names = list(map(str, range(25)))
 
 print("TESTING")
 sys.stdout.flush()
