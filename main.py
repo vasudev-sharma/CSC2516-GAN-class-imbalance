@@ -55,6 +55,9 @@ parser.add_argument('--dataset_size', type=int, required=True)
 parser.add_argument('--skip_training', type=bool, required=False)
 parser.add_argument('--dataset', help = 'RSNA, COVID', type=str, required=False)
 parser.add_argument('--fraction', help='Enter the fraction of the training data', type=float, required=True)
+parser.add_argument('--batch_size', help="Batch Size", type=int, required=False, default=32)
+parser.add_argument('--lr', help="Learning Rate", type=float, required=False, default=1e-3)
+parser.add_argument('--epochs', help="Total Number of Epochs", type=int, required=False, default=30)
 FLAGS = parser.parse_args()
 
 
@@ -99,13 +102,14 @@ elif user == "neha":
     output_path = "/local/nhulkund/UROP/6.819FinalProjectRAMP/outputs"
     model_path = output_path
 elif user == "vasu":
-    data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
-    output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
-    model_path = output_path
-    
-    # data_path = "/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_images"
-    # output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
-    # model_path = output_path
+    if FLAGS.dataset == "COVID":
+        data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
+        output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
+        model_path = output_path
+    else:
+        data_path = "/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_images"
+        output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
+        model_path = output_path
     
 else:
     raise Exception("Invalid user")
@@ -116,7 +120,7 @@ print("OUTPUT PATH: {}".format(output_path))
 print("MODEL PATH: {}".format(model_path + model_name))
 sys.stdout.flush()
 
-dataset_full_train, dataset_test = load_data(data_path, dataset_size, with_gan, frac=frac)
+dataset_full_train, dataset_test = load_data(data_path, dataset_size, with_gan)
 
 params = {}
 model_id = 1
@@ -154,6 +158,13 @@ else:
 split = 0.05
 val_length = int(split * len(dataset_full_train))
 dataset_val, dataset_train = random_split(dataset_full_train, [val_length, len(dataset_full_train) - val_length])
+
+ds_frac_train_len = int(frac * len(dataset_train))
+ds_frac_untrain_len = len(dataset_train) - ds_frac_train_len
+dataset_train, dataset_untrain = random_split(dataset_train, [ds_frac_train_len, ds_frac_untrain_len])
+print()
+print('Len of the training dataset is', len(dataset_train))
+
 dataLoaderTrain = DataLoader(dataset=dataset_train, batch_size=batch_size, shuffle=True,  num_workers=3, pin_memory=True)
 dataLoaderVal = DataLoader(dataset=dataset_val, batch_size=batch_size, shuffle=False, num_workers=3, pin_memory=True)
 dataLoaderTest = DataLoader(dataset=dataset_test, batch_size=batch_size, num_workers=3, pin_memory=True)

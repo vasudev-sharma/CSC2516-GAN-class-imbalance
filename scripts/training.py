@@ -30,7 +30,7 @@ import pickle
 use_gpu = torch.cuda.is_available()
 
 
-def load_data(path, dataset_size=None, with_gan=False, frac=1.0):
+def load_data(path, dataset_size=None, with_gan=False):
     # add data augmentations transforms here
     # TRAIN_WITH_GAN_FILENAME = "train_preprocessed_subset_{}_with_gan.csv".format(dataset_size)
     # TRAIN_WITHOUT_GAN_FILENAME = "train_preprocessed_subset_{}.csv".format(dataset_size)
@@ -63,9 +63,9 @@ def load_data(path, dataset_size=None, with_gan=False, frac=1.0):
     len_test = len(ds_covid) - len_train
     ds_covid_train, ds_covid_test = random_split(ds_covid, [len_train, len_test])  
 
-    ds_frac_train_len = int(frac * len(ds_covid_train))
-    ds_val_len = len(ds_covid_train) - ds_frac_train_len
-    ds_covid_frac_train, ds_covid_frac_valid = random_split(ds_covid_train, [ds_frac_train_len, ds_val_len])
+    # ds_frac_train_len = int(frac * len(ds_covid_train))
+    # ds_val_len = len(ds_covid_train) - ds_frac_train_len
+    # ds_covid_frac_train, ds_covid_frac_valid = random_split(ds_covid_train, [ds_frac_train_len, ds_val_len])
     # d_chex_test = xrv.datasets.CheX_Dataset(imgpath=path,
     #                                    csvpath=path + "test_train_preprocessed.csv",
     #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
@@ -74,9 +74,9 @@ def load_data(path, dataset_size=None, with_gan=False, frac=1.0):
     #                                    csvpath=path + "test_train_preprocessed.csv",
     #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
 
-    print("The length of the training dataset is", ds_covid_frac_train)
+    # print("The length of the training dataset is", ds_covid_frac_train)
 
-    return ds_covid_frac_train, ds_covid_test
+    return ds_covid_train, ds_covid_test
 
 def get_model(num_classes):
     model = xrv.models.DenseNet(num_classes=num_classes)
@@ -220,6 +220,7 @@ def testing(model, test_loader, nnClassCount, class_names):
     # print(outGT.shape, "outgt")
     aurocIndividual = computeAUROC(outGT, outPRED, nnClassCount)
     aurocMean = np.array(aurocIndividual).mean()
+    wandb.config.test_aucroc = aurocMean 
 
     # print(len(aurocIndividual))
     # print(aurocIndividual)
