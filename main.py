@@ -165,9 +165,9 @@ dataset_train, dataset_untrain = random_split(dataset_train, [ds_frac_train_len,
 print()
 print('Len of the training dataset is', len(dataset_train))
 
-dataLoaderTrain = DataLoader(dataset=dataset_train, batch_size=batch_size, shuffle=True,  num_workers=3, pin_memory=True)
-dataLoaderVal = DataLoader(dataset=dataset_val, batch_size=batch_size, shuffle=False, num_workers=3, pin_memory=True)
-dataLoaderTest = DataLoader(dataset=dataset_test, batch_size=batch_size, num_workers=3, pin_memory=True)
+dataLoaderTrain = DataLoader(dataset=dataset_train, batch_size=batch_size, shuffle=True,  num_workers=2, pin_memory=True)
+dataLoaderVal = DataLoader(dataset=dataset_val, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
+dataLoaderTest = DataLoader(dataset=dataset_test, batch_size=batch_size, num_workers=2, pin_memory=True)
 
 print("Batch size: {}".format(batch_size))
 print("Learning rate: {}".format(lr))
@@ -182,7 +182,7 @@ wandb.config.lr = lr
 wandb.config.optimizer = optimizer
 
 
-if FLAGS.dataset == 'RSNA':
+if FLAGS.dataset == 'COVID':
     num_classes = 25
 else:
     num_classes = 2
