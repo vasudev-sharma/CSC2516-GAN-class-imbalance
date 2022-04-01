@@ -1,3 +1,4 @@
+import wandb
 import os
 import numpy as np
 import time
@@ -20,7 +21,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from PIL import Image
 import torch.nn.functional as func
 import torchxrayvision as xrv
-from tqdm.notebook import tqdm
+from tqdm.auto import tqdm
 
 from sklearn.metrics import roc_auc_score
 import sklearn.metrics as metrics
@@ -53,13 +54,41 @@ parser.add_argument('--with_gan', type=bool, required=True)
 parser.add_argument('--dataset_size', type=int, required=True)
 parser.add_argument('--skip_training', type=bool, required=False)
 parser.add_argument('--dataset', help = 'RSNA, COVID', type=str, required=False)
+parser.add_argument('--fraction', help='Enter the fraction of the training data', type=float, required=True)
 FLAGS = parser.parse_args()
+
+
+# ADD SEED for consistent result
+SEED = 42
+np.random.seed(SEED)
+wandb.login()
+torch.manual_seed(SEED)
+random.seed(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.deterministic = False
+os.environ['PYTHONHASHSEED'] = str(SEED)
+
 
 idx = FLAGS.idx
 user = FLAGS.user
 with_gan = FLAGS.with_gan
 skip_training = FLAGS.skip_training
 dataset_size = FLAGS.dataset_size
+frac = FLAGS.fraction
+
+config = {
+    'idx': idx,
+'user': user,
+'with_gan': with_gan,
+'skip_training': skip_training,
+'dataset_size': dataset_size,
+'frac': frac,
+'dataset': FLAGS.dataset
+}
+
+wandb.init(entity='vs74', project='CSC2516')
+wandb.config.update(config)
+
 
 if user == "shobhita":
     data_path = "/om/user/shobhita/src/chexpert/data/CheXpert-v1.0-small/"
@@ -87,7 +116,7 @@ print("OUTPUT PATH: {}".format(output_path))
 print("MODEL PATH: {}".format(model_path + model_name))
 sys.stdout.flush()
 
-dataset_full_train, dataset_test = load_data(data_path, dataset_size, with_gan)
+dataset_full_train, dataset_test = load_data(data_path, dataset_size, with_gan, frac=frac)
 
 params = {}
 model_id = 1
@@ -115,7 +144,7 @@ if idx == 0:
     model_params = {}
     batch_size = 32
     lr = 0.001
-    optimizer = "momentum"
+    optimizer = "adam"
 else:
     model_params = params[idx]
     batch_size = model_params["batch_size"]
@@ -134,6 +163,13 @@ print("Learning rate: {}".format(lr))
 print("Optimizer: {}".format(optimizer))
 print("WITH GAN DATA: {}".format(with_gan))
 print("Train dataset size: {}".format(len(dataset_train)))
+
+
+# Log hyperparameters
+wandb.config.batch_size = batch_size
+wandb.config.lr = lr
+wandb.config.optimizer = optimizer
+
 
 if FLAGS.dataset == 'RSNA':
     num_classes = 25

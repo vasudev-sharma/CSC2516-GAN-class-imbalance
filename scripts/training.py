@@ -2,6 +2,7 @@ import numpy as np
 import sys
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import wandb
 
 import torch
 import torch.nn as nn
@@ -29,7 +30,7 @@ import pickle
 use_gpu = torch.cuda.is_available()
 
 
-def load_data(path, dataset_size=None, with_gan=False):
+def load_data(path, dataset_size=None, with_gan=False, frac=1.0):
     # add data augmentations transforms here
     # TRAIN_WITH_GAN_FILENAME = "train_preprocessed_subset_{}_with_gan.csv".format(dataset_size)
     # TRAIN_WITHOUT_GAN_FILENAME = "train_preprocessed_subset_{}.csv".format(dataset_size)
@@ -61,6 +62,10 @@ def load_data(path, dataset_size=None, with_gan=False):
     len_train = int(0.8 * (len(ds_covid)))
     len_test = len(ds_covid) - len_train
     ds_covid_train, ds_covid_test = random_split(ds_covid, [len_train, len_test])  
+
+    ds_frac_train_len = int(frac * len(ds_covid_train))
+    ds_val_len = len(ds_covid_train) - ds_frac_train_len
+    ds_covid_frac_train, ds_covid_frac_valid = random_split(ds_covid_train, [ds_frac_train_len, ds_val_len])
     # d_chex_test = xrv.datasets.CheX_Dataset(imgpath=path,
     #                                    csvpath=path + "test_train_preprocessed.csv",
     #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
@@ -68,7 +73,10 @@ def load_data(path, dataset_size=None, with_gan=False):
     # d_chex_test = xrv.datasets.CheX_Dataset(imgpath=path,
     #                                    csvpath=path + "test_train_preprocessed.csv",
     #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
-    return ds_covid_train, ds_covid_test
+
+    print("The length of the training dataset is", ds_covid_frac_train)
+
+    return ds_covid_frac_train, ds_covid_test
 
 def get_model(num_classes):
     model = xrv.models.DenseNet(num_classes=num_classes)
@@ -140,6 +148,8 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
         train_loss /= len(train_loader)
         valid_loss /= len(valid_loader)
 
+        wandb.log({'Train Loss': train_loss,
+                    'Val Loss': valid_loss})
         # saves best epoch
         print(f'Epoch: {epoch + 1}/{num_epochs}.. Training loss: {train_loss}.. Validation Loss: {valid_loss}')
         losses['val'].append(valid_loss)
@@ -150,6 +160,7 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
             best_valid_loss = valid_loss
         print("Best Valid Loss so far:", best_valid_loss)
         print("Best epoch so far: ", best_epoch)
+
 
     with open(model_path + "{}_losses.pkl".format(model_name), "wb") as handle:
         pickle.dump(losses, handle)
