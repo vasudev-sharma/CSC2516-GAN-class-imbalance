@@ -170,6 +170,7 @@ dataLoaderVal = DataLoader(dataset=dataset_val, batch_size=batch_size, shuffle=F
 dataLoaderTest = DataLoader(dataset=dataset_test, batch_size=batch_size, num_workers=2, pin_memory=True)
 
 print("Batch size: {}".format(batch_size))
+
 print("Learning rate: {}".format(lr))
 print("Optimizer: {}".format(optimizer))
 print("WITH GAN DATA: {}".format(with_gan))
@@ -180,7 +181,7 @@ print("Train dataset size: {}".format(len(dataset_train)))
 wandb.config.batch_size = batch_size
 wandb.config.lr = lr
 wandb.config.optimizer = optimizer
-
+wandb.config.epochs = FLAGS.epochs
 
 if FLAGS.dataset == 'COVID':
     num_classes = 25
@@ -193,7 +194,7 @@ if not skip_training:
     print("TRAINING")
     best_valid_loss, best_epoch = training(
         model=model,
-        num_epochs=1,
+        num_epochs=FLAGS.epochs,
         model_path=model_path,
         model_name=model_name,
         train_loader=dataLoaderTrain,
