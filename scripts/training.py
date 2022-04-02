@@ -26,6 +26,8 @@ import random
 import logging
 import pandas as pd
 import pickle
+from scripts.utils import EarlyStopping
+
 
 use_gpu = torch.cuda.is_available()
 
@@ -109,6 +111,8 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
     best_epoch = 0
 
     losses = {"val": [], "train": []}
+    
+    early_stopping = EarlyStoppin(patience=10, verbose=True)
 
     for epoch in range(num_epochs):
         # training loss
@@ -148,8 +152,21 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
         train_loss /= len(train_loader)
         valid_loss /= len(valid_loader)
 
+
+
+
+        # Log onto wandb
+
         wandb.log({'Train Loss': train_loss,
                     'Val Loss': valid_loss})
+
+
+        # Early Stopping
+        early_stopping(valid_loss, model)
+        if early_stopping.early_stop:
+            print()
+            print("="*32 + "Early Stopping" + "="*32)
+            
         # saves best epoch
         print(f'Epoch: {epoch + 1}/{num_epochs}.. Training loss: {train_loss}.. Validation Loss: {valid_loss}')
         losses['val'].append(valid_loss)
