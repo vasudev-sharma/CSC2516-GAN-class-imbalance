@@ -112,7 +112,7 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
 
     losses = {"val": [], "train": []}
     
-    early_stopping = EarlyStoppin(patience=10, verbose=True)
+    early_stopping = EarlyStopping(patience=10, verbose=True)
 
     for epoch in range(num_epochs):
         # training loss
