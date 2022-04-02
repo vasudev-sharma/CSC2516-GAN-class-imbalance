@@ -26,13 +26,13 @@ import sklearn.metrics as metrics
 # import logging
 # import pandas as pd
 import pickle
-from scripts.utils import EarlyStopping
+from .utils import EarlyStopping
 
 
 use_gpu = torch.cuda.is_available()
 
 
-def load_data(path, dataset_size=None, with_gan=False):
+def load_data(path, dataset_size=None, with_gan=False, data_aug=False):
     # add data augmentations transforms here
     # TRAIN_WITH_GAN_FILENAME = "train_preprocessed_subset_{}_with_gan.csv".format(dataset_size)
     # TRAIN_WITHOUT_GAN_FILENAME = "train_preprocessed_subset_{}.csv".format(dataset_size)
@@ -45,8 +45,16 @@ def load_data(path, dataset_size=None, with_gan=False):
     # COVID train
     train_filename = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/metadata.csv'
 
-    # Train file RSNA
-    # train_filename = '/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_labels.csv'
+    if data_aug:
+        data_aug_transforms = transforms.Compose([transforms.RandomHorizontalFlip(),
+                                                    transforms.RandomVerticalFlip()])
+
+        ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
+                                        csvpath=train_filename, transform=transform, data_aug=data_aug_transforms)
+    else:
+        ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
+                                       csvpath=train_filename, transform=transform)
+                                       
 
     print("\nUsing labels: {}".format(train_filename))
     # sys.stdout.flush()
@@ -55,9 +63,6 @@ def load_data(path, dataset_size=None, with_gan=False):
     #                                    csvpath=train_filename,
     #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
 
-    ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
-                                       csvpath=train_filename, transform=transform)
-                                       
     # ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
                                     #    csvpath=train_filename, transform=transform, extension='.dcm')
 
@@ -237,6 +242,11 @@ def testing(model, test_loader, nnClassCount, class_names):
     # print(outGT.shape, "outgt")
     aurocIndividual = computeAUROC(outGT, outPRED, nnClassCount)
     aurocMean = np.array(aurocIndividual).mean()
+
+    for idx, class_auroc in enumerate(aurocIndividual):
+        # class_name = f'test_aucroc_{idx}'
+        wandb.config.update({f'test_aucroc_{idx}': class_auroc})
+        # wandb.config.class_name = class_auroc
     wandb.config.test_aucroc = aurocMean 
 
     # print(len(aurocIndividual))

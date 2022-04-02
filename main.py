@@ -60,6 +60,7 @@ parser.add_argument('--fraction', help='Enter the fraction of the training data'
 parser.add_argument('--batch_size', help="Batch Size", type=int, required=False, default=32)
 parser.add_argument('--lr', help="Learning Rate", type=float, required=False, default=1e-3)
 parser.add_argument('--epochs', help="Total Number of Epochs", type=int, required=False, default=30)
+parser.add_argument('--data_aug', help="Add data augmentation or not", type=bool, required=False, default=False)
 FLAGS = parser.parse_args()
 
 
@@ -88,7 +89,8 @@ config = {
 'skip_training': skip_training,
 'dataset_size': dataset_size,
 'frac': frac,
-'dataset': FLAGS.dataset
+'dataset': FLAGS.dataset,
+'data_aug': FLAGS.data_aug
 }
 
 wandb.init(entity='vs74', project='CSC2516')
@@ -122,7 +124,7 @@ print("OUTPUT PATH: {}".format(output_path))
 print("MODEL PATH: {}".format(model_path + model_name))
 sys.stdout.flush()
 
-dataset_full_train, dataset_test = load_data(data_path, dataset_size, with_gan)
+dataset_full_train, dataset_test = load_data(data_path, dataset_size, with_gan, FLAGS.data_aug)
 
 params = {}
 model_id = 1
