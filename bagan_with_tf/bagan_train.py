@@ -123,6 +123,7 @@ if __name__ == '__main__':
     # GABRIEL: min_classes is the minority class we want to bring balance to
     target_classes = np.array(range(len(classes)))
     print("GABRIEL, target_classes: ", target_classes)
+    print("GABRIEL, opt_class: ", opt_class)
     if opt_class >= 0:  # GABRIEL: opt_class comes from options.target_class
         min_classes = np.array([opt_class])
     else:
@@ -144,6 +145,7 @@ if __name__ == '__main__':
             os.path.exists("{}/class_0_generator.h5".format(res_dir, c)) and
             os.path.exists("{}/class_0_reconstructor.h5".format(res_dir, c))
         ):
+            print("ubalance == 1.0")
             # Without additional imbalance, BAGAN does not need to be retrained, we simlink the pregenerated model
             os.symlink("{}/class_0_score.csv".format(res_dir), "{}/class_{}_score.csv".format(res_dir, c))
             os.symlink("{}/class_0_discriminator.h5".format(res_dir), "{}/class_{}_discriminator.h5".format(res_dir, c))
@@ -199,3 +201,4 @@ if __name__ == '__main__':
         img_samples['class_{}'.format(c)] = gan.generate_samples(c=c, samples=10)
 
         save_image_array(np.array([img_samples['class_{}'.format(c)]]), '{}/plot_class_{}.png'.format(res_dir, c))
+

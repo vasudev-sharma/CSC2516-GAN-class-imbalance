@@ -17,30 +17,36 @@ class BatchGenerator:
     TEST = 0
 
     def __init__(self, data_src, batch_size=32, class_to_prune=None, unbalance=0, dataset='MNIST'):
+        print("GABRIEL: data_src: ", data_src, " , batch_size: ", batch_size, " , ubalance: ", unbalance)
         assert dataset in ('MNIST', 'CIFAR10'), 'Unknown dataset: ' + dataset
         self.batch_size = batch_size
         self.data_src = data_src
 
         # Load data
         if dataset == 'MNIST':
-            #mnist = input_data.read_data_sets("dataset/mnist", one_hot=False) DEPRECATED
-            (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.mnist.load_data() # ADDED GABRIEL
+            #mnist = input_data.read_data_sets("dataset/mnist", one_hot=False) GABRIEL: DEPRECATED
+            (train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.mnist.load_data() # ADDED by GABRIEL
 
 
             assert self.batch_size > 0, 'Batch size has to be a positive integer!'
 
             if self.data_src == self.TEST:
-                self.dataset_x = test_images #mnist.test.images DEPRECATED
-                self.dataset_y = test_labels #mnist.test.labels DEPRECATED
+                self.dataset_x = test_images #mnist.test.images DEPRECATED, ADDED by GABRIEL
+                self.dataset_y = test_labels #mnist.test.labels DEPRECATED, ADDED by GABRIEL
             else:
-                self.dataset_x = train_images #mnist.train.images DEPRECATED
-                self.dataset_y = train_labels #mnist.train.labels DEPRECATED
+                self.dataset_x = train_images #mnist.train.images DEPRECATED, ADDED by GABRIEL
+                self.dataset_y = train_labels #mnist.train.labels DEPRECATED, ADDED by GABRIEL
 
             # Normalize between -1 and 1
+            print("GABRIEL: Normalize between -1 and 1")
+            print("GABRIEL: self.dataset_x shape previous: ", self.dataset_x.shape)
             self.dataset_x = (np.reshape(self.dataset_x, (self.dataset_x.shape[0], 28, 28)) - 0.5) * 2
+            print("GABRIEL: self.dataset_x shape after: ", self.dataset_x.shape)
 
             # Include 1 single color channel
+            # GABRIEL: np.expand_dims -> Expand the shape of an array.
             self.dataset_x = np.expand_dims(self.dataset_x, axis=1)
+            print("GABRIEL: np.expand_dims on dataset_x: ", self.dataset_x.shape)
 
         elif dataset == 'CIFAR10':
             ((x, y), (x_test, y_test)) = tf.keras.datasets.cifar10.load_data()
@@ -70,17 +76,22 @@ class BatchGenerator:
         per_class_count = list()
         for c in classes:
             per_class_count.append(np.sum(np.array(self.dataset_y == c)))
+        print("GABRIEL: per_class_count: ", per_class_count)
 
         # Prune if needed!
         if class_to_prune is not None:
+            print("GABRIEL: Prune if needed!")
             all_ids = list(np.arange(len(self.dataset_x)))
 
             mask = [class_to_prune == lc for lc in self.dataset_y]
+            print("GABRIEL mask.shape: ", mask.shape)
             all_ids_c = np.array(all_ids)[mask]
+            print("GABRIEL all_ids_c.shape: ", all_ids_c.shape)
             np.random.shuffle(all_ids_c)
 
             other_class_count = np.array(per_class_count)
             other_class_count = np.delete(other_class_count, class_to_prune)
+            # GABRIEL: np.delete eliminates the indices to remove in class_to_prune
             to_keep = int(np.ceil(unbalance * max(
                 other_class_count)))
 
@@ -144,6 +155,8 @@ class BatchGenerator:
             access_pattern = sorted(access_pattern)
 
             yield dataset_x[access_pattern, :, :, :], labels[access_pattern]
+
+
 
 
 
