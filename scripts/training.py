@@ -46,6 +46,11 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False):
     train_filename = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/metadata.csv'
 
     if data_aug:
+        transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
+                                                xrv.datasets.XRayResizer(224),
+                                                transforms.ToTensor(),
+                                                transforms.Lambda(lambda t: torch.permute(t, (1, 0, 2)))])
+
         data_aug_transforms = transforms.Compose([transforms.RandomHorizontalFlip(),
                                                     transforms.RandomVerticalFlip()])
 
