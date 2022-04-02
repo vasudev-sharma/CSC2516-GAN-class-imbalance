@@ -172,6 +172,7 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
             print()
             print("="*32 + "Early Stopping" + "="*32)
 
+            break
         # saves best epoch
         print(f'Epoch: {epoch + 1}/{num_epochs}.. Training loss: {train_loss}.. Validation Loss: {valid_loss}')
         losses['val'].append(valid_loss)
