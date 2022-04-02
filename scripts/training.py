@@ -18,13 +18,13 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from PIL import Image
 import torch.nn.functional as func
 import torchxrayvision as xrv
-from tqdm.notebook import tqdm
+# from tqdm.notebook import tqdm
 
 from sklearn.metrics import roc_auc_score
 import sklearn.metrics as metrics
-import random
-import logging
-import pandas as pd
+# import random
+# import logging
+# import pandas as pd
 import pickle
 from scripts.utils import EarlyStopping
 
@@ -166,7 +166,7 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
         if early_stopping.early_stop:
             print()
             print("="*32 + "Early Stopping" + "="*32)
-            
+
         # saves best epoch
         print(f'Epoch: {epoch + 1}/{num_epochs}.. Training loss: {train_loss}.. Validation Loss: {valid_loss}')
         losses['val'].append(valid_loss)
