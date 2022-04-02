@@ -237,7 +237,7 @@ def testing(model, test_loader, nnClassCount, class_names):
     # print()
     # print("targets")
     with torch.no_grad():
-        for batch_idx, data_all in tqdm(enumerate(test_loader)):
+        for batch_idx, data_all in enumerate(tqdm(test_loader)):
             if batch_idx % 100 == 0:
                 print(batch_idx)
 
