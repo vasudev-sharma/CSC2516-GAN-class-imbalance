@@ -1,5 +1,5 @@
 # Inspired from coursera
-
+import wandb 
 import torch
 from tqdm.auto import tqdm
 import torch.nn as nn
@@ -18,6 +18,7 @@ def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28)):
     img_unflat = image_tensor.cpu().view(-1, *size)
     img_grid = make_grid(img_unflat[:num_images], nrow=5)
     plt.imshow(img_grid.permute(1, 2, 0), cmap='gray')
+
     plt.show()
 
 
@@ -85,18 +86,18 @@ def get_discriminator_block(input_dim, output_dim):
 
 class Discriminator(nn.Module):
     def __init__(self, input_dim=784, hidden_dim=128):
-        super(Discriminator).__init__()
+        super(Discriminator, self).__init__()
 
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
-        # self.ouptu
+        # self.sel
 
         self.disc = nn.Sequential(
             get_discriminator_block(input_dim, hidden_dim*4),
             get_discriminator_block(hidden_dim * 4, hidden_dim * 2),
             get_discriminator_block(hidden_dim * 2, hidden_dim),
 
-            nn.Linear(hidden_dim, 1) # Real or Fake
+            nn.Linear(hidden_dim, 1), # Real or Fake
         )
 
 
@@ -117,15 +118,26 @@ lr = 1e-5
 device = 'cuda'
 batch_size = 128
 
+wandb.init(entity='vs74', project='GAN')
+config = { 'num_epochs' : num_epochs
+'z_dim' : z_dim
+'display_step' : display_step
+'lr' : lr
+'device' : device
+'batch_size' : batch_size
+    }
+
+wandb.config.update(config)
+
 # Dataloader
 dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transforms.ToTensor()), batch_size=batch_size, shuffle=True)
 
 # Initialize the networks
 gen = Generator(z_dim).to(device)
-gen_opt = nn.optim.Adam(gen.parameters(), lr=lr)
+gen_opt = torch.optim.Adam(gen.parameters(), lr=lr)
 
 disc = Discriminator().to(device)
-disc_opt = nn.optim.Adam(disc.parameters(), lr=lr)
+disc_opt = torch.optim.Adam(disc.parameters(), lr=lr)
 
 
 def get_disc_loss(gen, disc, z_dim, criterion, real_samples, num_images, device='cuda'):
@@ -173,10 +185,10 @@ mean_generator_loss = 0.0
 mean_discriminator_loss = 0.0
 curr_step = 0 
 
-for epoch in range(num_epochs):
+for epoch in tqdm(range(num_epochs)):
     
     for real, _ in tqdm(dataloader):
-        current_batch_size = real.size[0]
+        current_batch_size = real.size(0)
 
         # Flatten the image
         real = real.view(current_batch_size, -1).to(device)
@@ -187,7 +199,7 @@ for epoch in range(num_epochs):
         disc_loss = get_disc_loss(gen, disc, z_dim, criterion, real, current_batch_size, device=device)
 
         # Discriminator Loss
-        disc_loss.backward(retrain_graph=True)
+        disc_loss.backward(retain_graph=True)
 
         disc_opt.step()
 
@@ -200,9 +212,9 @@ for epoch in range(num_epochs):
 
 
         ## Keep track of Discriminator and Generator Loss
-        mean_generator_loss += mean_generator_loss.item() / display_step
+        mean_generator_loss += gen_loss.item() / display_step
 
-        mean_discriminator_loss += mean_discriminator_loss.item() / display_step
+        mean_discriminator_loss += disc_loss.item() / display_step
 
         if curr_step > 0 and curr_step % display_step == 0:
             print(f'Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
@@ -215,7 +227,7 @@ for epoch in range(num_epochs):
 
         curr_step += 1
 
-        
+print("Training is Completed ")    
 
 
 
