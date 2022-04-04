@@ -9,7 +9,7 @@ from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-torch.manual_seed(42)
+torch.manual_seed(0)
 
 def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28)):
     ''' Function for visualizing images
