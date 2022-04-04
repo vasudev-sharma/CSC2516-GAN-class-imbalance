@@ -17,7 +17,7 @@ def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28)):
 
     img_unflat = image_tensor.cpu().view(-1, *size)
     img_grid = make_grid(img_unflat[:num_images], nrow=5)
-    plt.imshow(img_grid.permute(1, 2, 0), cmap='gray')
+    plt.imshow(img_grid.permute(1, 2, 0).squeeze(), cmap='gray')
 
     plt.show()
 
@@ -119,12 +119,12 @@ device = 'cuda'
 batch_size = 128
 
 wandb.init(entity='vs74', project='GAN')
-config = { 'num_epochs' : num_epochs
-'z_dim' : z_dim
-'display_step' : display_step
-'lr' : lr
-'device' : device
-'batch_size' : batch_size
+config = { 'num_epochs' : num_epochs,
+'z_dim' : z_dim,
+'display_step' : display_step,
+'lr' : lr,
+'device' : device,
+'batch_size' : batch_size,
     }
 
 wandb.config.update(config)
