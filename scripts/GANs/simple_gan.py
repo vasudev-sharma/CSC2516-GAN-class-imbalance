@@ -106,3 +106,16 @@ class Discriminator(nn.Module):
 
 
 ## Training Loop
+
+
+# Hyperparameters and loss
+criterion = nn.BCEWithLogitsLoss()
+num_epochs = 200
+z_dim = 64
+display_step = 500
+lr = 1e-5
+device = 'cuda'
+
+
+
+# Dataloader
