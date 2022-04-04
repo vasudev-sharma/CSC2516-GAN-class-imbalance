@@ -169,3 +169,55 @@ assert tuple(disc_output.shape) == (num_test, 1)
 assert disc_output.std() > 0.25
 assert disc_output.std() < 0.5
 print("Success!")
+
+
+
+# Hyperparameters and loss
+criterion = nn.BCEWithLogitsLoss()
+num_epochs = 200
+z_dim = 64
+display_step = 500
+lr = 2e-4
+device = 'cuda'
+batch_size = 128
+
+
+beta1 = 0.5
+beta2 = 0.999
+
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5), (0.5)),
+])
+
+
+dataloader = DataLoader(datasets.MNIST('.', download=True. transform=transform), batch_size=batch_size, shuffle=True)
+
+gen = Generator(z_dim).to(device)
+gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
+disc = Discriminator().to(device)
+disc_opt = torch.optim.Adam(disc.parameters(), lr=lr, betas=(beta1, beta2))
+
+
+
+# Weights initializations: with mean and std 0 and 2 respectively
+def weights_init(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+        torch.nn.init.normal_(m.weight, 0.0, 0.2)
+    if isinstance(m, nn.BatchNorm2d):
+        torch.nn.init.normal_(m.weight, 0.0, 0.2)
+        torch.nn.init.constant_(m.bias, 0)
+
+
+gen = gen.apply(weights_init)
+disc = disc.apply(weights_init)
+
+num_epochs = 50
+mean_discriminator_loss = 0.0 
+mean_generator_loss = 0.0 
+
+
+for epoch in tqdm(range(num_epochs)):
+    
+    for data, _ in tqdm(dataloder):
+
