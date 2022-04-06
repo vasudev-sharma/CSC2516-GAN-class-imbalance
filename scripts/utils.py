@@ -1,7 +1,14 @@
 import numpy as np
 import torch
 from torchvision import models
+import scipy
+import torch
+import os
+import scipy
+from torch.distributions import MultivariateNormal
+import numpy as np
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # Early stopping: Adapted from https://github.com/Bjarten/early-stopping-pytorch/blob/master/pytorchtools.py
@@ -55,11 +62,72 @@ class EarlyStopping:
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
-def get_inception_feature_map(path=None):
+def get_inception_feature_map(path=None, device=''):
     if not path:
         model = models.inception_v3(pretrained=True)
     else:
-        model = 
+        model = models.inception_v3(pretrained=False)
+        model.load_state_dict(torch.load('/root/CSC2516-GAN-class-imbalance/inception_v3_google-1a9a5a14.pth'))
     model.fc = torch.nn.Identity()
+    model = model.to(device)
+    model = model.eval()
 
     return model
+
+def matrix_sqrt(x):
+    y = x.cpu().detach().numpy()
+    y = scipy.linalg.sqrtm(y)
+
+    return torch.tensor(y, device=x.device)
+
+def frechet_distance(mu_x, mu_y, sigma_x, sigma_y):
+    '''
+    Funciton for returning frechet distance between two Multivariate Normal distributions
+    Parameters:
+        mu_x: Mean of the first distribution
+        my_x: Mean of the second distribution
+        sigma_x: Covariance of the first distribution
+        sigma_y: Covariance of the second distribution
+    '''
+
+    fid = (mu_x - mu_y).dot(mu_x-mu_y) + torch.trace(sigma_x) + torch.trace(sigma_y) - 2*torch.trace(matrix_sqrt(sigma_x @ sigma_y))
+    return fid
+
+# UNIT TEST
+
+mean1 = torch.Tensor([0, 0]) # Center the mean at the origin
+covariance1 = torch.Tensor( # This matrix shows independence - there are only non-zero values on the diagonal
+    [[1, 0],
+     [0, 1]]
+)
+dist1 = MultivariateNormal(mean1, covariance1)
+
+mean2 = torch.Tensor([0, 0]) # Center the mean at the origin
+covariance2 = torch.Tensor( # This matrix shows dependence 
+    [[2, -1],
+     [-1, 2]]
+)
+dist2 = MultivariateNormal(mean2, covariance2)
+
+assert torch.isclose(
+    frechet_distance(
+        dist1.mean, dist2.mean,
+        dist1.covariance_matrix, dist2.covariance_matrix
+    ),
+    4 - 2 * torch.sqrt(torch.tensor(3.))
+)
+
+assert (frechet_distance(
+        dist1.mean, dist1.mean,
+        dist1.covariance_matrix, dist1.covariance_matrix
+    ).item() == 0)
+
+print("Success!")
+
+def get_covariance(features):
+    return torch.Tensor(np.cov(features.detach().numpy(), rowvar=False))
+
+
+def preprocess(img):
+    return torch.nn.functional.interpolate(img, size=(299, 299), mode='bilinear', align_corners=False)
+    

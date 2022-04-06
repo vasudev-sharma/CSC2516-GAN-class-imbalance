@@ -7,6 +7,7 @@ from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+from utils import get_inception_feature_map, preprocess
 
 torch.manual_seed(0)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -370,12 +371,18 @@ critic_repeats = 5
 c_lambda = 10
 critic_losses = []
 generator_losses = []
+fake_features_list = []
+real_features_list = []
 
 for epoch in tqdm(range(num_epochs)):
     
     for real, labels in tqdm(dataloader):
         curr_batch_size = len(real)
         real = real.to(device)
+
+        # FID
+        real_features_list += [get_inception_feature_map(device=device).detach().to('cpu')] # Move the features to cpu
+
         labels = labels.to(device)
 
         mean_critic_loss = 0.0
@@ -392,7 +399,11 @@ for epoch in tqdm(range(num_epochs)):
 
             fake_noise_combined = combine_vectors(fake_noise, labels_one_hot)
 
+
             fake_images = gen(fake_noise_combined)
+            fake_image_preprocess = preprocess(fake_images)
+            fake_features_list.append(get_inception_feature_map(device=device).detach().to('cpu'))
+
 
             ## Sanity check
             # Enough images
@@ -469,3 +480,6 @@ for epoch in tqdm(range(num_epochs)):
 
 print("Training is Completed ")    
 
+# Concatenate the features
+real_features_all = torch.cat(real_features_list)
+fake_features_all = torch.cat(fake_features_list)
