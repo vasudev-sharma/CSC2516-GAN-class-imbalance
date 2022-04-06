@@ -1,5 +1,6 @@
 import wandb 
 import torch
+import torch.nn.functional as F
 from tqdm.auto import tqdm
 import torch.nn as nn
 from torchvision import transforms, datasets
@@ -62,7 +63,7 @@ class Generator(nn.Module):
     def unsqueeze_noise(self, noise_vectors):
         return noise_vectors.view(noise_vectors.size(0), self.z_dim, 1, 1)
 
-def get_noise(n_samples, z_dim, device='cuda'):
+def get_noise(n_samples, z_dim, device='cpu'):
     return torch.randn(n_samples, z_dim, device=device)
 
 
@@ -106,9 +107,6 @@ assert tuple(gen_output.shape) == (num_test, 1, 28, 28)
 assert gen_output.std() > 0.5
 assert gen_output.std() < 0.8
 print("Success!")
-
-
-
 
 
 class Critic(nn.Module):
@@ -306,6 +304,26 @@ def test_gradient_penalty(image_shape):
 test_gradient_penalty((256, 1, 28, 28))
 print("Success!")
 
+def get_one_hot_labels(labels, classes):
+    return F.one_hot(labels, num_classes=classes)
+
+def combine_vectors(x, y):
+    ''' Function for combining One hot encoded vector with the noise vectors
+    '''
+
+    return torch.cat([x.float(), y.float()], dim=1)
+
+combined = combine_vectors(torch.tensor([[1, 2], [3, 4]]), torch.tensor([[5, 6], [7, 8]]));
+# Check exact order of elements
+assert torch.all(combined == torch.tensor([[1, 2, 5, 6], [3, 4, 7, 8]]))
+# Tests that items are of float type
+assert (type(combined[0][0].item()) == float)
+# Check shapes
+combined = combine_vectors(torch.randn(1, 4, 5), torch.randn(1, 8, 5));
+assert tuple(combined.shape) == (1, 12, 5)
+assert tuple(combine_vectors(torch.randn(1, 10, 12).long(), torch.randn(1, 20, 12).long()).shape) == (1, 30, 12)
+print("Success!")
+
 # Weights initializations: with mean and std 0 and 2 respectively
 def weights_init(m):
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
@@ -398,8 +416,4 @@ for epoch in tqdm(range(num_epochs)):
         curr_step += 1
 
 print("Training is Completed ")    
-
-
-
-
 

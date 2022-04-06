@@ -24,6 +24,7 @@ curl 'https://storage.googleapis.com/kaggle-competitions-data/kaggle-v2/10338/86
 unzip data.zip -d RSNA_Pneumonia 
 rm data.zip
 
+rm -r COVID-19
 git clone https://github.com/muhammedtalo/COVID-19.git
 
 cd ..
