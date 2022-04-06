@@ -195,6 +195,8 @@ def save_models(gen=None, disc=None, gen_pretrained_path='', disc_pretrained_pat
     print('...'*32)
 
 
+
+
 def gan_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', help = 'RSNA, COVID', type=str, required=False)
