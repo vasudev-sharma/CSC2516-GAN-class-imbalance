@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+from torchvision import models
+
 
 
 # Early stopping: Adapted from https://github.com/Bjarten/early-stopping-pytorch/blob/master/pytorchtools.py
@@ -52,3 +54,12 @@ class EarlyStopping:
             self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
+
+def get_inception_feature_map(path=None):
+    if not path:
+        model = models.inception_v3(pretrained=True)
+    else:
+        model = 
+    model.fc = torch.nn.Identity()
+
+    return model

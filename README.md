@@ -1,7 +1,6 @@
 # Computer Vision Project: GAN-based Data Augmentation for Chest X-ray Classification
 
-- Cloned from [this repository](https://github.com/ssundaram21/6.819FinalProjectRAMP)
-- Paper: https://arxiv.org/pdf/2107.02970.pdf
+
 
 ## Download Data
 ```bash
@@ -21,11 +20,15 @@ $ python main.py --with_gan "" --idx 0 --user "vasu" --skip_training ""  --datas
 For more info, read about the arguments `$ python main.py --help`
 
 
-## GANs
+## GANs: TODO
 | **GAN** | **Path** | **Loss** |
 | :---- | :-----: | -----: |
 |DCGAN|`scripts/DCGAN.py`| BCE Loss|
 |DCGAN with GP|`scripts/DCGAN_GP.py`| W-Loss + Gradient Penalty|
 | Conditional DCGAN with GP | `scripts/DCGAN_GP_conditional.py`| W-Loss + Gradient Penalty|
 | SNGAN | `scripts/SNGAN_conditional.py` | Spectral Normalization | 
+
+## Acknowledgements: TODO
+This repository makes use of the code from the following repositories. We thank all the authors for making their code publically available.
+- [this repository](https://github.com/ssundaram21/6.819FinalProjectRAMP)
 
