@@ -4,7 +4,7 @@ from torchvision import models
 import scipy
 import torch
 import os
-import scipy
+import scipy.linalg
 from torch.distributions import MultivariateNormal
 import numpy as np
 
@@ -62,12 +62,13 @@ class EarlyStopping:
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
-def get_inception_model(path=None, device=''):
+def get_inception_model(path=None, device=device):
     if not path:
         model = models.inception_v3(pretrained=True)
     else:
         model = models.inception_v3(pretrained=False)
         model.load_state_dict(torch.load('/root/CSC2516-GAN-class-imbalance/inception_v3_google-1a9a5a14.pth'))
+    model.Conv2d_1a_3x3.conv = torch.nn.Conv2d(1, 32, kernel_size=3, stride=2, bias=False)
     model.fc = torch.nn.Identity()
     model = model.to(device)
     model = model.eval()

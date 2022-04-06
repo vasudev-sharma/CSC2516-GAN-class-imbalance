@@ -7,7 +7,7 @@ from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-from utils import get_inception_model, preprocess, get_covariance, frechet_distance
+from scripts.utils import get_inception_model, preprocess, get_covariance, frechet_distance
 
 torch.manual_seed(0)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -187,7 +187,7 @@ print("Success!")
 
 # Hyperparameters and loss
 criterion = nn.BCEWithLogitsLoss()
-num_epochs = 200
+num_epochs = 1
 z_dim = 64
 display_step = 500
 lr = 2e-4
@@ -199,6 +199,8 @@ beta1 = 0.5
 beta2 = 0.999
 
 transform = transforms.Compose([
+    transforms.Resize(299),
+    transforms.CenterCrop(299),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,)),
 ])
@@ -474,7 +476,7 @@ for epoch in tqdm(range(num_epochs)):
             # fake_images = gen(noise_vectors)
             show_tensor_images(fake_images, type="fake")
             show_tensor_images(real, type="real")
-
+            # print("Hello World")
             # mean_generator_loss = 0.0
             # mean_discriminator_loss = 0.0
 
@@ -488,13 +490,15 @@ def compute_FID(real_features_list, fake_features_list):
     real_features_all = torch.cat(real_features_list)
     fake_features_all = torch.cat(fake_features_list)
 
+    # Mean and covariance
     mu_fake = fake_features_all.mean(0)
     mu_real = real_features_all.mean(0)
     sigma_fake = get_covariance(fake_features_all)
     sigma_real = get_covariance(real_features_all)
 
+    # Print FID
     with torch.no_grad():
-        print(f'The frechet_distance is:  {frechet_distance(mu_real, mu_fake, sigma_real, sigma_fake)}')
+        print(f'The frechet_distance is:  {frechet_distance(mu_real, mu_fake, sigma_real, sigma_fake).item()}')
 
 
 
