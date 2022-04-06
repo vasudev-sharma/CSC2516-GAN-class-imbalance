@@ -11,14 +11,21 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 torch.manual_seed(0)
 
-def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28)):
+def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake'):
     ''' Function for visualizing images
     '''
 
     img_unflat = image_tensor.cpu().view(-1, *size)
     img_grid = make_grid(img_unflat[:num_images], nrow=5)
-    plt.imshow(img_grid.permute(1, 2, 0).squeeze(), cmap='gray')
-
+    plt.imshow(img_grid.permute(1, 2, 0).squeeze().numpy(), cmap='gray')
+    if type == 'fake':
+        images = wandb.Image(img_grid.permute(1, 2, 0).squeeze().numpy(), caption="Fake Images")
+        wandb.log({"Fake Image": images})
+    elif type == 'real':
+        images = wandb.Image(img_grid.permute(1, 2, 0).squeeze().numpy(), caption="Real Images")
+        wandb.log({"Real Image": images})
+    else:
+        raise Exception("Invalid Type entered: Real / Fake")
     plt.show()
 
 
@@ -28,7 +35,7 @@ def generator_block(input_dim, output_dim):
     return nn.Sequential(
         nn.Linear(input_dim, output_dim),
         nn.BatchNorm1d(output_dim),
-        nn.ReLU(),
+        nn.ReLU(inplace=True),
     )
 
 
@@ -81,7 +88,7 @@ def get_noise(num_samples, z_dim, device='cpu'):
 def get_discriminator_block(input_dim, output_dim):
     return nn.Sequential(
         nn.Linear(input_dim, output_dim),
-        nn.LeakyReLU(0.2)
+        nn.LeakyReLU(0.2, inplace=True)
     )
 
 class Discriminator(nn.Module):
@@ -144,8 +151,8 @@ def get_disc_loss(gen, disc, z_dim, criterion, real_samples, num_images, device=
     # Forward pass
     noise_vectors = get_noise(num_images, z_dim, device=device)
 
-    fake_samples = gen(noise_vectors.detach())
-    fake_predictions = disc(fake_samples)
+    fake_samples = gen(noise_vectors)
+    fake_predictions = disc(fake_samples.detach())
     fake_targets = torch.zeros_like(fake_predictions)
     fake_loss = criterion(fake_predictions, fake_targets)
 
@@ -175,7 +182,7 @@ def get_gen_loss(gen, disc, z_dim, criterion, num_images, device='cuda'):
     fake_samples = gen(noise_vectors)
     fake_predictions = disc(fake_samples)
 
-    gen_loss = criterion(fake_predictions, torch.zeros_like(fake_predictions))
+    gen_loss = criterion(fake_predictions, torch.ones_like(fake_predictions))
 
     return gen_loss
 
@@ -216,14 +223,20 @@ for epoch in tqdm(range(num_epochs)):
 
         mean_discriminator_loss += disc_loss.item() / display_step
 
+        wandb.log({
+            "epoch": epoch,
+            "Generator Loss": mean_generator_loss,
+            "Discriminator Loss": mean_discriminator_loss
+        })
+
         if curr_step > 0 and curr_step % display_step == 0:
-            print(f'Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
+            print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
             noise_vectors = get_noise(current_batch_size, z_dim, device=device)
             fake_images = gen(noise_vectors)
-            show_tensor_images(fake_images)
-
+            show_tensor_images(fake_images, type="fake")
+            show_tensor_images(real, type="real")
             mean_generator_loss = 0
-            mean_discrimator_loss = 0
+            mean_discriminator_loss = 0
 
         curr_step += 1
 
