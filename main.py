@@ -115,7 +115,9 @@ elif user == "vasu":
         output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
         model_path = output_path
     elif FLAGS.dataset == "COVID-small":
-        data_path = 
+        data_path = "/root/CSC2516-GAN-class-imbalance/data/COVID-19/X-Ray Image DataSet"
+        output_path = "/root/CSC2516-GAN-class-imbalance/data/COVID-19/ouputs"
+        model_path = output_path
 else:
     raise Exception("Invalid user")
 
@@ -125,7 +127,7 @@ print("OUTPUT PATH: {}".format(output_path))
 print("MODEL PATH: {}".format(model_path + model_name))
 sys.stdout.flush()
 
-dataset_full_train, dataset_test = load_data(data_path, dataset_size, with_gan, FLAGS.data_aug)
+dataset_full_train, dataset_test = load_data(data_path, dataset_size, with_gan, FLAGS.data_aug, FLAGS.dataset)
 
 params = {}
 model_id = 1
@@ -190,8 +192,12 @@ wandb.config.epochs = FLAGS.epochs
 
 if FLAGS.dataset == 'COVID':
     num_classes = 25
-else:
+elif FLAGS.dataset == "RSNA":
     num_classes = 2
+elif FLAGS.dataset == "COVID-small":
+    num_classes = 3
+else:
+    raise Exception("Invalid Option entered")
 
 model = get_model(num_classes=num_classes)
 

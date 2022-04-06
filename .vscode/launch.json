@@ -11,7 +11,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args":["--with_gan", "", "--idx", "0", "--user", "vasu", "--skip_training", "", "--dataset_size", "10", "--dataset", "COVID", "--fraction", "0.5", "--epochs", "30", "--data_aug", "True"]
+            "args":["--with_gan", "", "--idx", "0", "--user", "vasu", "--skip_training", "", "--dataset_size", "10", "--dataset", "COVID-small", "--fraction", "0.5", "--epochs", "30", "--data_aug", "True"]
         }
     ]
 }

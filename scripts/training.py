@@ -45,7 +45,6 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
 
     # COVID train
     if dataset == 'COVID':
-
         train_filename = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/metadata.csv'
     elif dataset == "RSNA":
         train_filename = '/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_labels.csv'
@@ -64,13 +63,14 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
             ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
                                        csvpath=train_filename, transform=transform, extension='.dcm', data_aug=data_aug_transforms)
         elif dataset == "COVID-small":
-            transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
-                                                xrv.datasets.XRayResizer(224),
+            # TODO: Have same transforms
+            transform = torchvision.transforms.Compose([transforms.CenterCrop(224),
+                                                transforms.Resize(224),
                                                 transforms.ToTensor(),
                                                 transforms.Lambda(lambda t: torch.permute(t, (1, 0, 2))),
                                                 transforms.RandomHorizontalFlip(),
                                                     transforms.RandomVerticalFlip()])
-            ds_covid = torchvision.ImageFolder(imgpath=path, transform=transform)
+            ds_covid = ImageFolder(path, transform=transform)
     else:
         if dataset == "COVID":
             ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
@@ -79,10 +79,14 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
             ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
                                     csvpath=train_filename, transform=transform, extension='.dcm')
         elif dataset == "COVID-small":
-            ds_covid = transform.ImageFolder(imgpath=path, transform=transform)
+            # TODO: Have same transforms
+            transform = torchvision.transforms.Compose([transforms.CenterCrop(224),
+                                                transforms.Resize(224),
+                                                transforms.ToTensor()])
+            ds_covid = ImageFolder(path, transform=transform)
     
 
-    print("\nUsing labels: {}".format(train_filename))
+    # print("\nUsing labels: {}".format(train_filename))
     # sys.stdout.flush()
 
     # d_chex_train = xrv.datasets.CheX_Dataset(imgpath=path,
@@ -124,7 +128,7 @@ def preprocess_data(dataset):
     return dataset
 
 
-def training(model, num_epochs, model_path, model_name, train_loader, valid_loader,lr=0.001, optimizer="momentum"):
+def training(model, num_epochs, model_path, model_name, train_loader, valid_loader,lr=0.001, optimizer="momentum", dataset='COVID'):
     print("training")
     # hyperparameters
     criterion = nn.BCEWithLogitsLoss()
@@ -153,12 +157,17 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
         train_loss = 0
         count = 0
         for idx, data_all in enumerate(tqdm(train_loader)):
+            if dataset == "COVID-small":
+                data, target = data_all[0],  data_all[1]
+            else:
+                data, target = data_all['img'],  data_all['lab']
+                
             count += 1
             # if count % 100 == 0:
             #     print("Count {}".format(count))
             #     sys.stdout.flush()
-            data = data_all['img']
-            target = data_all['lab']
+            data = data
+            target = target
             data = data.to("cuda:0")
             target = target.to("cuda:0")
             optimizer.zero_grad()
@@ -173,8 +182,13 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
         valid_loss = 0
         with torch.no_grad():
             for data_all in tqdm(valid_loader):
-                data = data_all['img']
-                target = data_all['lab']
+                if dataset == "COVID-small":
+                    data, target = data_all[0],  data_all[1]
+                else:
+                    data, target = data_all['img'],  data_all['lab']
+                    
+                data = data
+                target = target
                 data = data.to("cuda:0")
                 target = target.to("cuda:0")
                 output = model(data)
