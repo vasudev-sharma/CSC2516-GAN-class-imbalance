@@ -67,7 +67,7 @@ def get_noise(n_samples, z_dim, device='cuda'):
 ## Test Discriminator
 gen = Generator()
 num_test = 100
-'''
+
 # Test the hidden block
 test_hidden_noise = get_noise(num_test, gen.z_dim)
 test_hidden_block = gen.make_gen_block(10, 20, kernel_size=4, stride=1)
@@ -80,9 +80,9 @@ test_hidden_block_stride = gen.make_gen_block(20, 20, kernel_size=4, stride=2)
 test_final_noise = get_noise(num_test, gen.z_dim) * 20
 test_final_block = gen.make_gen_block(10, 20, final_layer=True)
 test_final_uns_noise = gen.unsqueeze_noise(test_final_noise)
-final_output = test_final_block(test_final_uns_noise)'''
+final_output = test_final_block(test_final_uns_noise)
 
-'''# Test the whole thing:
+# Test the whole thing:
 test_gen_noise = get_noise(num_test, gen.z_dim)
 test_uns_gen_noise = gen.unsqueeze_noise(test_gen_noise)
 gen_output = gen(test_uns_gen_noise)
@@ -105,7 +105,7 @@ assert gen_output.std() > 0.5
 assert gen_output.std() < 0.8
 print("Success!")
 
-'''
+
 
 
 

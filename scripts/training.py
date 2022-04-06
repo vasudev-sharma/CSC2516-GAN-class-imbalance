@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torchvision
 import torchvision.transforms as transforms
+from torchvision.datasets import ImageFolder
 import torch.optim as optim
 import torch.nn.functional as tfunc
 from torch.utils.data import Dataset
@@ -46,7 +47,7 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
     if dataset == 'COVID':
 
         train_filename = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/metadata.csv'
-    else:
+    elif dataset == "RSNA":
         train_filename = '/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_labels.csv'
     if data_aug:
         transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
@@ -59,17 +60,26 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
         if dataset == "COVID":
             ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
                                         csvpath=train_filename, transform=transform, data_aug=data_aug_transforms)
-        else:
+        elif dataset == "RSNA":
             ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
                                        csvpath=train_filename, transform=transform, extension='.dcm', data_aug=data_aug_transforms)
-
+        elif dataset == "COVID-small":
+            transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
+                                                xrv.datasets.XRayResizer(224),
+                                                transforms.ToTensor(),
+                                                transforms.Lambda(lambda t: torch.permute(t, (1, 0, 2))),
+                                                transforms.RandomHorizontalFlip(),
+                                                    transforms.RandomVerticalFlip()])
+            ds_covid = torchvision.ImageFolder(imgpath=path, transform=transform)
     else:
         if dataset == "COVID":
             ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
                                         csvpath=train_filename, transform=transform)
-        else:
+        elif dataset == "RSNA":
             ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
                                     csvpath=train_filename, transform=transform, extension='.dcm')
+        elif dataset == "COVID-small":
+            ds_covid = transform.ImageFolder(imgpath=path, transform=transform)
     
 
     print("\nUsing labels: {}".format(train_filename))
