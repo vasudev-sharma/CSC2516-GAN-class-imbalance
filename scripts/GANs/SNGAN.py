@@ -144,7 +144,7 @@ num_test = 100
 
 gen = Generator()
 disc = Discriminator()
-test_images = gen(get_noise(num_test, gen.z_dim))
+'''test_images = gen(get_noise(num_test, gen.z_dim))
 
 # Test the hidden block
 test_hidden_block = disc.make_disc_block(1, 5, kernel_size=6, stride=3)
@@ -180,7 +180,7 @@ assert tuple(disc_output.shape) == (num_test, 1)
 assert disc_output.std() > 0.25
 assert disc_output.std() < 0.5
 print("Success!")
-
+'''
 
 
 # Hyperparameters and loss
