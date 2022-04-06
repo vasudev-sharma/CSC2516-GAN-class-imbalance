@@ -110,11 +110,12 @@ elif user == "vasu":
         data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
         output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
         model_path = output_path
-    else:
+    elif FLAGS.dataset == "RSNA":
         data_path = "/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_images"
         output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
         model_path = output_path
-    
+    elif FLAGS.dataset == "COVID-small":
+        data_path = 
 else:
     raise Exception("Invalid user")
 

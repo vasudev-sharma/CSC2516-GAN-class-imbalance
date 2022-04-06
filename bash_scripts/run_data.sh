@@ -24,9 +24,12 @@ curl 'https://storage.googleapis.com/kaggle-competitions-data/kaggle-v2/10338/86
 unzip data.zip -d RSNA_Pneumonia 
 rm data.zip
 
+git clone https://github.com/muhammedtalo/COVID-19
+
 cd ..
 
 # Install python dependecies
 pip install torchxrayvision
 pip install pydicom
 pip install wandb
+

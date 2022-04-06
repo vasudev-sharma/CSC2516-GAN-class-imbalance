@@ -265,7 +265,7 @@ def get_gen_loss(critic_fake_predictions):
     gen_loss = -1 * torch.mean(critic_fake_predictions)
     return gen_loss
 
-def get_disc_loss(critic_fake_predictions, critic_real_predictions, gp, c_lambda):
+def get_critic_loss(critic_fake_predictions, critic_real_predictions, gp, c_lambda):
 
     critic_loss = torch.mean(critic_fake_predictions) - torch.mean(critic_real_predictions) + c_lambda * gp
 
@@ -313,9 +313,9 @@ for epoch in tqdm(range(num_epochs)):
             
 
             epsilon = torch.randn(len(real), 1, 1, 1, device=device, requires_grad=True)
-            gradient = get_gradient(critic, real, fake, fake.detach(), epsilon())
+            gradient = get_gradient(critic, real, fake_images, fake_images.detach(), epsilon())
             gp = gradient_penalty(gradient)
-            critic_loss = get_critic_loss(critic_fake_pred, crtic_real_preds, gp, c_lambda)
+            critic_loss = get_critic_loss(critic_fake_preds, critic_real_preds, gp, c_lambda)
 
             mean_critic_loss += critic_loss.item() / critic_repeats
 

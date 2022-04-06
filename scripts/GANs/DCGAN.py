@@ -36,7 +36,7 @@ class Generator(nn.Module):
             self.make_gen_block(self.z_dim, hidden_dim * 4),
             self.make_gen_block(hidden_dim * 4, hidden_dim * 2, kernel_size=4, stride=1),
             self.make_gen_block(hidden_dim * 2, hidden_dim),
-            self.make_gen_block(hidden_dim, im_channel, final_layer=True)
+            self.make_gen_block(hidden_dim, im_channel, kernel_size=4, final_layer=True)
         )
     
     def make_gen_block(self, input_channels, output_channels, kernel_size=3,  stride=2, final_layer=False):
@@ -276,7 +276,7 @@ def weights_init(m):
 gen = gen.apply(weights_init)
 disc = disc.apply(weights_init)
 
-num_epochs = 50
+# num_epochs = 50
 mean_discriminator_loss = 0.0 
 mean_generator_loss = 0.0 
 curr_step = 0
@@ -334,7 +334,7 @@ for epoch in tqdm(range(num_epochs)):
             mean_generator_loss = 0
             mean_discriminator_loss = 0
 
-    curr_step += 1
+        curr_step += 1
 
 print("Training is Completed ")    
 
