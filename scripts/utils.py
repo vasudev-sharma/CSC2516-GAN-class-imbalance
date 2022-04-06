@@ -3,6 +3,7 @@ import torch
 from torchvision import models
 import scipy
 import torch
+import wandb
 import os
 import scipy.linalg
 from torch.distributions import MultivariateNormal
@@ -171,17 +172,23 @@ def save_models(gen=None, disc=None, gen_pretrained_path='', disc_pretrained_pat
         disc_pretrained_path = os.path.join(os.getcwd(), 'disc.pth')
     if gen is not None and disc is None:
         torch.save(gen.state_dict(gen_pretrained_path))
+        wandb.save(gen_pretrained_path)
+
         # return 
     elif disc is not None and gen is None:
         torch.save(disc.state_dict(disc_pretrained_path))
+        wandb.save(disc_pretrained_path)
         # return 
     elif not disc and not gen:
         torch.save(gen.state_dict(gen_pretrained_path))
         torch.save(disc.state_dict(disc_pretrained_path))
+
+        wandb.save(gen_pretrained_path)
+        wandb.save(disc_pretrained_path)
         # return
-    else:
+    elif disc is None and gen is None:
         raise Exception("Generator and/or Discriminator are invalid")
-        
+
     print('...'*32)
     print(f"Models Generator and discriminator have been saved {gen_pretrained_path} and {disc_pretrained_path} respectively")
     print('...'*32)

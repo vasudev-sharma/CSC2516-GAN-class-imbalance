@@ -29,3 +29,6 @@ dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform),
 
 # # Compute FID after training
 # compute_FID(real_features_list, fake_features_list)
+
+
+
