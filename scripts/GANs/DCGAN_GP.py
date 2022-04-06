@@ -13,7 +13,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake'):
     ''' Function for visualizing images
     '''
-
+    image_tensor = (image_tensor + 1) / 2
     img_unflat = image_tensor.cpu().view(-1, *size)
     img_grid = make_grid(img_unflat[:num_images], nrow=5)
     plt.imshow(img_grid.permute(1, 2, 0).squeeze().numpy(), cmap='gray')
@@ -26,6 +26,8 @@ def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake
     else:
         raise Exception("Invalid Type entered: Real / Fake")
     plt.show()
+
+
 
 class Generator(nn.Module):
     def __init__(self, z_dim=10, im_channel=1, hidden_dim=64):
@@ -67,7 +69,7 @@ def get_noise(n_samples, z_dim, device='cuda'):
 ## Test Discriminator
 gen = Generator()
 num_test = 100
-'''
+
 # Test the hidden block
 test_hidden_noise = get_noise(num_test, gen.z_dim)
 test_hidden_block = gen.make_gen_block(10, 20, kernel_size=4, stride=1)
@@ -80,9 +82,9 @@ test_hidden_block_stride = gen.make_gen_block(20, 20, kernel_size=4, stride=2)
 test_final_noise = get_noise(num_test, gen.z_dim) * 20
 test_final_block = gen.make_gen_block(10, 20, final_layer=True)
 test_final_uns_noise = gen.unsqueeze_noise(test_final_noise)
-final_output = test_final_block(test_final_uns_noise)'''
+final_output = test_final_block(test_final_uns_noise)
 
-'''# Test the whole thing:
+# Test the whole thing:
 test_gen_noise = get_noise(num_test, gen.z_dim)
 test_uns_gen_noise = gen.unsqueeze_noise(test_gen_noise)
 gen_output = gen(test_uns_gen_noise)
@@ -105,14 +107,14 @@ assert gen_output.std() > 0.5
 assert gen_output.std() < 0.8
 print("Success!")
 
-'''
+
 
 
 
 class Critic(nn.Module):
 
     def __init__(self, im_channel=1, hidden_dim=16):
-        super(Discriminator, self).__init__()
+        super(Critic, self).__init__()
 
         self.disc = nn.Sequential(
             self.make_disc_block(im_channel, hidden_dim),
@@ -133,7 +135,8 @@ class Critic(nn.Module):
             return nn.Conv2d(input_channels, output_channels, kernel_size, stride)
     
     def forward(self, inputs):
-        return self.disc(inputs)
+        disc_pred = self.disc(inputs)
+        return disc_pred.view(len(disc_pred), -1)
 
 '''
 Test your make_disc_block() function
@@ -271,6 +274,38 @@ def get_critic_loss(critic_fake_predictions, critic_real_predictions, gp, c_lamb
 
     return critic_loss
 
+
+def test_get_gradient(image_shape):
+    real = torch.randn(*image_shape, device=device) + 1
+    fake = torch.randn(*image_shape, device=device) - 1
+    epsilon_shape = [1 for _ in image_shape]
+    epsilon_shape[0] = image_shape[0]
+    epsilon = torch.rand(epsilon_shape, device=device).requires_grad_()
+    gradient = get_gradient(critic, real, fake, epsilon)
+    assert tuple(gradient.shape) == image_shape
+    assert gradient.max() > 0
+    assert gradient.min() < 0
+    return gradient
+
+gradient = test_get_gradient((256, 1, 28, 28))
+print("Success!")
+def test_gradient_penalty(image_shape):
+    bad_gradient = torch.zeros(*image_shape)
+    bad_gradient_penalty = gradient_penalty(bad_gradient)
+    assert torch.isclose(bad_gradient_penalty, torch.tensor(1.))
+
+    image_size = torch.prod(torch.Tensor(image_shape[1:]))
+    good_gradient = torch.ones(*image_shape) / torch.sqrt(image_size)
+    good_gradient_penalty = gradient_penalty(good_gradient)
+    assert torch.isclose(good_gradient_penalty, torch.tensor(0.))
+
+    random_gradient = test_get_gradient(image_shape)
+    random_gradient_penalty = gradient_penalty(random_gradient)
+    assert torch.abs(random_gradient_penalty - 1) < 0.1
+
+test_gradient_penalty((256, 1, 28, 28))
+print("Success!")
+
 # Weights initializations: with mean and std 0 and 2 respectively
 def weights_init(m):
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
@@ -304,7 +339,7 @@ for epoch in tqdm(range(num_epochs)):
         mean_critic_loss = 0.0
         for _ in range(critic_repeats):
 
-            # Update Cricit
+            # Update Critic
             critic_opt.zero_grad()
             fake_noise = get_noise(curr_batch_size, z_dim, device=device)
             fake_images = gen(fake_noise)
@@ -327,6 +362,8 @@ for epoch in tqdm(range(num_epochs)):
 
 
         # Update Generator
+        gen_opt.zero_grad()
+
         fake_noise = get_noise(curr_batch_size, z_dim, device=device)
         fake_images = gen(fake_noise)
         fake_predictions = critic(fake_images)
@@ -342,14 +379,14 @@ for epoch in tqdm(range(num_epochs)):
         # Log into wandb
         wandb.log({
             "epoch": epoch,
-            "Generator Loss": sum(mean_generator_loss) / len(mean),
-            "Discriminator Loss": mean_discriminator_loss
+            "Generator Loss": sum(generator_losses) / len(generator_losses),
+            "Discriminator Loss": sum(critic_losses) / len(critic_losses)
         })
 
         # Visualization code
 
         if curr_step > 0 and curr_step % display_step == 0:
-            print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
+            print(f'Step: {curr_step} | Generator Loss:{generator_losses[-display_step:] / display_step} | Discriminator Loss: {critic_losses[-display_step:] / display_step}')
             noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
             fake_images = gen(noise_vectors)
             show_tensor_images(fake_images, type="fake")
