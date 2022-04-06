@@ -64,7 +64,7 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
             ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
                                        csvpath=train_filename, transform=transform, extension='.dcm', data_aug=data_aug_transforms)
         elif dataset == "COVID-small":
-            # TODO: Have same transforms
+            # TODO: Have same transforms as COVID-Xray Transforms
             transform = torchvision.transforms.Compose([ transforms.Grayscale(num_output_channels=1),
                                                 transforms.CenterCrop(224),
                                                 transforms.Resize(224),
@@ -81,6 +81,7 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
                                     csvpath=train_filename, transform=transform, extension='.dcm')
         elif dataset == "COVID-small":
             # TODO: Have same transforms
+            # Better performance is without data aug --> need to check why
             transform = torchvision.transforms.Compose([ transforms.Grayscale(num_output_channels=1),
                                                 transforms.CenterCrop(224),
                                                 transforms.Resize(224),

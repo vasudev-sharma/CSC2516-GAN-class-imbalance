@@ -13,7 +13,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake'):
     ''' Function for visualizing images
     '''
-
+    image_tensor = (image_tensor + 1) / 2
     img_unflat = image_tensor.cpu().view(-1, *size)
     img_grid = make_grid(img_unflat[:num_images], nrow=5)
     plt.imshow(img_grid.permute(1, 2, 0).squeeze().numpy(), cmap='gray')
@@ -26,6 +26,8 @@ def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake
     else:
         raise Exception("Invalid Type entered: Real / Fake")
     plt.show()
+
+
 
 class Generator(nn.Module):
     def __init__(self, z_dim=10, im_channel=1, hidden_dim=64):
@@ -60,7 +62,7 @@ class Generator(nn.Module):
     def unsqueeze_noise(self, noise_vectors):
         return noise_vectors.view(noise_vectors.size(0), self.z_dim, 1, 1)
 
-def get_noise(n_samples, z_dim, device='cuda'):
+def get_noise(n_samples, z_dim, device='cpu'):
     return torch.randn(n_samples, z_dim, device=device)
 
 
@@ -129,18 +131,18 @@ class Discriminator(nn.Module):
                 nn.LeakyReLU(0.2, inplace=True)
             )
         else:
-
             return nn.Conv2d(input_channels, output_channels, kernel_size, stride)
     
     def forward(self, inputs):
-        return self.disc(inputs)
+        disc_pred = self.disc(inputs)
+        return disc_pred.view(len(disc_pred), -1)
 
-'''
-Test your make_disc_block() function
-'''
+
+# Test your make_disc_block() function
+
 num_test = 100
 
-'''gen = Generator()
+gen = Generator()
 disc = Discriminator()
 test_images = gen(get_noise(num_test, gen.z_dim))
 
@@ -178,7 +180,7 @@ assert tuple(disc_output.shape) == (num_test, 1)
 assert disc_output.std() > 0.25
 assert disc_output.std() < 0.5
 print("Success!")
-'''
+
 
 
 # Hyperparameters and loss
@@ -261,8 +263,6 @@ def gradient_penalty(gradient):
     return penalty
 
 
-def get_gen_loss(cirtic_fake_predictions):
-    pass
 
 # Weights initializations: with mean and std 0 and 2 respectively
 def weights_init(m):
@@ -305,7 +305,8 @@ for epoch in tqdm(range(num_epochs)):
 
 
         # Update Generator
-        fake_noise - get_noise(curr_batch_size, z_dim, device=device)
+        gen_opt.zero_grad()
+        fake_noise = get_noise(curr_batch_size, z_dim, device=device)
         fake_images = gen(fake_noise)
         fake_predictions = disc(fake_images)
         gen_loss = criterion(fake_predictions, torch.ones_like(fake_predictions))
