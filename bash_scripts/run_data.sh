@@ -34,3 +34,5 @@ pip install torchxrayvision
 pip install pydicom
 pip install wandb
 
+
+# Downlaod inception_v3 weights
