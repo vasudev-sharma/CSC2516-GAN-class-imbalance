@@ -6,6 +6,7 @@ from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+from torch.utils import save_models
 torch.manual_seed(0)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -341,4 +342,9 @@ print("Training is Completed ")
 
 
 
+#################################
+# Save Models and log onto wandb
+#################################
+
+save_models(gen=gen, disc=disc)
 

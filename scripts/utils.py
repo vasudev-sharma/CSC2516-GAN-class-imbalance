@@ -179,7 +179,7 @@ def save_models(gen=None, disc=None, gen_pretrained_path='', disc_pretrained_pat
         torch.save(disc.state_dict(), disc_pretrained_path)
         wandb.save(disc_pretrained_path)
         # return 
-    elif not disc and not gen:
+    elif disc is not None and  gen is not None:
         torch.save(gen.state_dict(), gen_pretrained_path)
         torch.save(disc.state_dict(), disc_pretrained_path)
 

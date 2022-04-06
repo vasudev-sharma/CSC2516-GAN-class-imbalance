@@ -6,6 +6,7 @@ import torch.nn as nn
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
+from scripts.utils import save_models
 import matplotlib.pyplot as plt
 
 torch.manual_seed(0)
@@ -419,3 +420,10 @@ for epoch in tqdm(range(num_epochs)):
         curr_step += 1
 
 print("Training is Completed ")    
+
+
+#################################
+# Save Models and log onto wandb
+#################################
+
+save_models(gen=gen, disc=critic)
