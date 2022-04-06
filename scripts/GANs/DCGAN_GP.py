@@ -109,7 +109,7 @@ print("Success!")
 
 
 
-class Discriminator(nn.Module):
+class Critic(nn.Module):
 
     def __init__(self, im_channel=1, hidden_dim=16):
         super(Discriminator, self).__init__()
@@ -214,8 +214,8 @@ dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform),
 
 gen = Generator(z_dim).to(device)
 gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
-disc = Discriminator().to(device)
-disc_opt = torch.optim.Adam(disc.parameters(), lr=lr, betas=(beta1, beta2))
+critic = Critic().to(device)
+critic_opt = torch.optim.Adam(critic.parameters(), lr=lr, betas=(beta1, beta2))
 
 
 def get_gradient(critic, real, fake, epsilon):
@@ -281,76 +281,20 @@ def weights_init(m):
 
 
 gen = gen.apply(weights_init)
-disc = disc.apply(weights_init)
+critic = critic.apply(weights_init)
 
 # num_epochs = 50
-mean_discriminator_loss = 0.0 
+mean_critic_loss = 0.0 
 mean_generator_loss = 0.0 
 curr_step = 0
 
 
-for epoch in tqdm(range(num_epochs)):
-    
-    for real, _ in tqdm(dataloader):
-        curr_batch_size = len(real)
-        real = real.to(device)
-
-        # Update Discriminator
-        disc_opt.zero_grad()
-        fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-        fake_images = gen(fake_noise)
-        fake_predictions = disc(fake_images.detach())
-        disc_fake_loss = criterion(fake_predictions, torch.zeros_like(fake_predictions))
-        real_predictions = disc(real)
-        disc_real_loss = criterion(real_predictions, torch.ones_like(real_predictions))
-
-        disc_loss = (disc_fake_loss + disc_real_loss) / 2
-
-        mean_discriminator_loss += disc_loss.item() / display_step
-        disc_loss.backward(retain_graph=True)
-        disc_opt.step()
-
-
-        # Update Generator
-        fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-        fake_images = gen(fake_noise)
-        fake_predictions = disc(fake_images)
-        gen_loss = criterion(fake_predictions, torch.ones_like(fake_predictions))
-
-        gen_loss.backward()
-        gen_opt.step()
-
-        mean_generator_loss += gen_loss.item() / display_step
-
-
-        # Log into wandb
-        wandb.log({
-            "epoch": epoch,
-            "Generator Loss": mean_generator_loss,
-            "Discriminator Loss": mean_discriminator_loss
-        })
-
-        # Visualization code
-
-        if curr_step > 0 and curr_step % display_step == 0:
-            print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
-            noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
-            fake_images = gen(noise_vectors)
-            show_tensor_images(fake_images, type="fake")
-            show_tensor_images(real, type="real")
-
-            mean_generator_loss = 0.0
-            mean_discriminator_loss = 0.0
-
-        curr_step += 1
-
-print("Training is Completed ")    
-
-'''
 critic_repeats = 5
 c_lambda = 10
 critic_losses = []
-generators_losses = []
+generator_losses = []
+
+
 for epoch in tqdm(range(num_epochs)):
     
     for real, _ in tqdm(dataloader):
@@ -418,7 +362,6 @@ for epoch in tqdm(range(num_epochs)):
 
 print("Training is Completed ")    
 
-'''
 
 
 
