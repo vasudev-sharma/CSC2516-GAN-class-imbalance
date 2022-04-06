@@ -62,7 +62,7 @@ class EarlyStopping:
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
 
-def get_inception_feature_map(path=None, device=''):
+def get_inception_model(path=None, device=''):
     if not path:
         model = models.inception_v3(pretrained=True)
     else:
