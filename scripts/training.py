@@ -6,6 +6,7 @@ import wandb
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 import torchvision
 import torchvision.transforms as transforms
@@ -64,13 +65,13 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
                                        csvpath=train_filename, transform=transform, extension='.dcm', data_aug=data_aug_transforms)
         elif dataset == "COVID-small":
             # TODO: Have same transforms
-            transform = torchvision.transforms.Compose([transforms.CenterCrop(224),
+            transform = torchvision.transforms.Compose([ transforms.Grayscale(num_output_channels=1),
+                                                transforms.CenterCrop(224),
                                                 transforms.Resize(224),
                                                 transforms.ToTensor(),
-                                                transforms.Lambda(lambda t: torch.permute(t, (1, 0, 2))),
                                                 transforms.RandomHorizontalFlip(),
                                                     transforms.RandomVerticalFlip()])
-            ds_covid = ImageFolder(path, transform=transform)
+            ds_covid = ImageFolder(path, transform=transform, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=3).float())
     else:
         if dataset == "COVID":
             ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
@@ -80,10 +81,11 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
                                     csvpath=train_filename, transform=transform, extension='.dcm')
         elif dataset == "COVID-small":
             # TODO: Have same transforms
-            transform = torchvision.transforms.Compose([transforms.CenterCrop(224),
+            transform = torchvision.transforms.Compose([ transforms.Grayscale(num_output_channels=1),
+                                                transforms.CenterCrop(224),
                                                 transforms.Resize(224),
                                                 transforms.ToTensor()])
-            ds_covid = ImageFolder(path, transform=transform)
+            ds_covid = ImageFolder(path, transform=transform, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=3).float())
     
 
     # print("\nUsing labels: {}".format(train_filename))
@@ -248,7 +250,7 @@ def computeAUROC(dataGT, dataPRED, classCount):
     return outAUROC
 
 
-def testing(model, test_loader, nnClassCount, class_names):
+def testing(model, test_loader, nnClassCount, class_names, dataset="COVID"):
     if use_gpu:
         outGT = torch.FloatTensor().cuda()
         outPRED = torch.FloatTensor().cuda()
@@ -265,8 +267,13 @@ def testing(model, test_loader, nnClassCount, class_names):
             if batch_idx % 100 == 0:
                 print(batch_idx)
 
-            data = data_all['img']
-            target = data_all['lab']
+            if dataset == "COVID-small":
+                    data, target = data_all[0],  data_all[1]
+            else:
+                data, target = data_all['img'],  data_all['lab']
+
+            data = data
+            target = target
             # print(target.shape)
             # print(target)
             target = target.cuda()

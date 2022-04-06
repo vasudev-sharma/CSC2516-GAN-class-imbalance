@@ -211,7 +211,8 @@ if not skip_training:
         train_loader=dataLoaderTrain,
         valid_loader=dataLoaderVal,
         lr=lr,
-        optimizer=optimizer
+        optimizer=optimizer,
+        dataset=FLAGS.dataset
     )
 
     # EPOCH = 10
@@ -242,7 +243,7 @@ class_names = list(map(str, range(num_classes)))
 
 print("TESTING")
 sys.stdout.flush()
-auc_results = testing(model, dataLoaderTest, len(class_names), class_names)
+auc_results = testing(model, dataLoaderTest, len(class_names), class_names, dataset=FLAGS.dataset)
 
 output = {}
 if not skip_training:
