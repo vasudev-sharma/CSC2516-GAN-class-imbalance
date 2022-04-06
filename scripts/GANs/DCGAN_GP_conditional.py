@@ -456,9 +456,9 @@ for epoch in tqdm(range(num_epochs)):
         # Visualization code
 
         if curr_step > 0 and curr_step % display_step == 0:
-            print(f'Step: {curr_step} | Generator Loss:{generator_losses[-display_step:] / display_step} | Discriminator Loss: {critic_losses[-display_step:] / display_step}')
-            noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
-            fake_images = gen(noise_vectors)
+            print(f'Step: {curr_step} | Generator Loss:{sum(generator_losses[-display_step:]) / display_step} | Discriminator Loss: {sum(critic_losses[-display_step:]) / display_step}')
+            # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
+            # fake_images = gen(noise_vectors)
             show_tensor_images(fake_images, type="fake")
             show_tensor_images(real, type="real")
 
