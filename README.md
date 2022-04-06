@@ -19,3 +19,13 @@ $ python main.py --with_gan "" --idx 0 --user "vasu" --skip_training ""  --datas
 ```
 
 For more info, read about the arguments `$ python main.py --help`
+
+
+## GANs
+| **GAN** | **Path** | **Loss** |
+| :---- | :-----: | -----: |
+|DCGAN|`scripts/DCGAN.py`| BCE Loss|
+|DCGAN with GP|`scripts/DCGAN_GP.py`| W-Loss + Gradient Penalty|
+| Conditional DCGAN with GP | `scripts/DCGAN_GP_conditional.py`| W-Loss + Gradient Penalty|
+| SNGAN | `scripts/SNGAN_conditional.py` | Spectral Normalization | 
+

@@ -462,8 +462,8 @@ for epoch in tqdm(range(num_epochs)):
             show_tensor_images(fake_images, type="fake")
             show_tensor_images(real, type="real")
 
-            mean_generator_loss = 0.0
-            mean_discriminator_loss = 0.0
+            # mean_generator_loss = 0.0
+            # mean_discriminator_loss = 0.0
 
         curr_step += 1
 
