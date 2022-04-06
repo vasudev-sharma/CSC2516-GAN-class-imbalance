@@ -32,13 +32,12 @@ def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake
 
 
 class Generator(nn.Module):
-    def __init__(self, input_dim=10, im_channel=1, hidden_dim=64):
+    def __init__(self, z_dim=10, im_channel=1, hidden_dim=64):
         super(Generator, self).__init__()
-        # self.input_dim = z_dim
-        self.input_dim = input_dim
+        self.z_dim = z_dim
         self.gen = nn.Sequential(
 
-            self.make_gen_block(self.input_dim, hidden_dim * 4),
+            self.make_gen_block(self.z_dim, hidden_dim * 4),
             self.make_gen_block(hidden_dim * 4, hidden_dim * 2, kernel_size=4, stride=1),
             self.make_gen_block(hidden_dim * 2, hidden_dim),
             self.make_gen_block(hidden_dim, im_channel, kernel_size=4, final_layer=True)
@@ -63,7 +62,7 @@ class Generator(nn.Module):
         return self.gen(z)
 
     def unsqueeze_noise(self, noise_vectors):
-        return noise_vectors.view(noise_vectors.size(0), self.input_dim, 1, 1)
+        return noise_vectors.view(noise_vectors.size(0), self.z_dim, 1, 1)
 
 def get_noise(n_samples, z_dim, device='cpu'):
     return torch.randn(n_samples, z_dim, device=device)
@@ -74,7 +73,7 @@ gen = Generator()
 num_test = 100
 
 # Test the hidden block
-test_hidden_noise = get_noise(num_test, gen.input_dim)
+test_hidden_noise = get_noise(num_test, gen.z_dim)
 test_hidden_block = gen.make_gen_block(10, 20, kernel_size=4, stride=1)
 test_uns_noise = gen.unsqueeze_noise(test_hidden_noise)
 hidden_output = test_hidden_block(test_uns_noise)
@@ -82,13 +81,13 @@ hidden_output = test_hidden_block(test_uns_noise)
 # Check that it works with other strides
 test_hidden_block_stride = gen.make_gen_block(20, 20, kernel_size=4, stride=2)
 
-test_final_noise = get_noise(num_test, gen.input_dim) * 20
+test_final_noise = get_noise(num_test, gen.z_dim) * 20
 test_final_block = gen.make_gen_block(10, 20, final_layer=True)
 test_final_uns_noise = gen.unsqueeze_noise(test_final_noise)
 final_output = test_final_block(test_final_uns_noise)
 
 # Test the whole thing:
-test_gen_noise = get_noise(num_test, gen.input_dim)
+test_gen_noise = get_noise(num_test, gen.z_dim)
 test_uns_gen_noise = gen.unsqueeze_noise(test_gen_noise)
 gen_output = gen(test_uns_gen_noise)
 
@@ -202,21 +201,6 @@ transform = transforms.Compose([
     transforms.Normalize((0.5,), (0.5,)),
 ])
 
-def get_input_dimensions(z_dim, input_shape, num_classes):
-    generator_input_dim = z_dim + num_classes
-    critic_input_dim = input_shape[0] + num_classes
-
-    return generator_input_dim, critic_input_dim
-
-# Add test
-def test_input_dims():
-    gen_dim, disc_dim = get_input_dimensions(23, (12, 23, 52), 9)
-    assert gen_dim == 32
-    assert disc_dim == 21
-test_input_dims()
-print("Success!")
-
-
 wandb.init(entity='vs74', project='GAN')
 config = { 'num_epochs' : num_epochs,
 'z_dim' : z_dim,
@@ -230,17 +214,14 @@ wandb.config.update(config)
 
 dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
 
-generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(1, 28, 28), num_classes=10)
-
-
-gen = Generator(generator_dim).to(device)
+gen = Generator(z_dim).to(device)
 gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
-critic = Critic(critic_dim).to(device)
+critic = Critic().to(device)
 critic_opt = torch.optim.Adam(critic.parameters(), lr=lr, betas=(beta1, beta2))
 
 
 def get_gradient(critic, real, fake, epsilon):
-    """ s the critic scores with respect to the mixes of fake and real images
+    """ Returns the critic scores with respect to the mixes of fake and real images
     Parameters:
         critic: The critic model
         real: batch of real images
@@ -305,7 +286,7 @@ def test_get_gradient(image_shape):
     assert gradient.min() < 0
     return gradient
 
-# gradient = test_get_gradient((256, 1, 28, 28))
+gradient = test_get_gradient((256, 1, 28, 28))
 print("Success!")
 def test_gradient_penalty(image_shape):
     bad_gradient = torch.zeros(*image_shape)
@@ -346,8 +327,6 @@ print("Success!")
 
 
 
-
-
 # Weights initializations: with mean and std 0 and 2 respectively
 def weights_init(m):
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
@@ -371,12 +350,12 @@ c_lambda = 10
 critic_losses = []
 generator_losses = []
 
+
 for epoch in tqdm(range(num_epochs)):
     
-    for real, labels in tqdm(dataloader):
+    for real, _ in tqdm(dataloader):
         curr_batch_size = len(real)
         real = real.to(device)
-        labels = labels.to(device)
 
         mean_critic_loss = 0.0
         for _ in range(critic_repeats):
@@ -384,32 +363,13 @@ for epoch in tqdm(range(num_epochs)):
             # Update Critic
             critic_opt.zero_grad()
             fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-
-            # Conditional GAN on labels
-            labels_one_hot = get_one_hot_labels(labels, classes=10)
-            image_one_hot_labels = labels_one_hot[:, :, None, None]
-            image_one_hot_labels = image_one_hot_labels.repeat(1, 1, real.size(2), real.size(3))
-
-            fake_noise_combined = combine_vectors(fake_noise, labels_one_hot)
-
-            fake_images = gen(fake_noise_combined)
-
-            ## Sanity check
-            # Enough images
-            assert len(fake_images) == len(real)
-
-            assert tuple(fake_noise_combined.shape) == (curr_batch_size, fake_noise.shape[1] + labels_one_hot.shape[1])
-
-            # Conditional GAN on images
-            fake_images_and_labels = combine_vectors(fake_images, image_one_hot_labels)
-            real_images_and_labels = combine_vectors(real, image_one_hot_labels)
-
-            critic_fake_preds = critic(fake_images_and_labels.detach())
-            critic_real_preds = critic(real_images_and_labels)
+            fake_images = gen(fake_noise)
+            critic_fake_preds = critic(fake_images.detach())
+            critic_real_preds = critic(real)
             
 
             epsilon = torch.randn(len(real), 1, 1, 1, device=device, requires_grad=True)
-            gradient = get_gradient(critic, real_images_and_labels, fake_images_and_labels.detach(), epsilon)
+            gradient = get_gradient(critic, real, fake_images.detach(), epsilon)
             gp = gradient_penalty(gradient)
             critic_loss = get_critic_loss(critic_fake_preds, critic_real_preds, gp, c_lambda)
 
@@ -426,17 +386,8 @@ for epoch in tqdm(range(num_epochs)):
         gen_opt.zero_grad()
 
         fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-        labels_one_hot = get_one_hot_labels(labels, classes=10)
-        image_one_hot_labels = labels_one_hot[:, :, None, None]
-        image_one_hot_labels = image_one_hot_labels.repeat(1, 1, real.size(2), real.size(3))
-
-        fake_noise_combined = combine_vectors(fake_noise, labels_one_hot)
-
-        fake_images = gen(fake_noise_combined)
-
-        fake_images_and_labels = combine_vectors(fake_images, image_one_hot_labels)
-
-        fake_predictions = critic(fake_images_and_labels)
+        fake_images = gen(fake_noise)
+        fake_predictions = critic(fake_images)
 
         gen_loss = get_gen_loss(fake_predictions)
 
@@ -468,4 +419,3 @@ for epoch in tqdm(range(num_epochs)):
         curr_step += 1
 
 print("Training is Completed ")    
-
