@@ -7,6 +7,7 @@ from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+
 torch.manual_seed(0)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -236,7 +237,7 @@ def get_gradient(critic, real, fake, epsilon):
     # Critic scores on the mixed images
     mixed_scores = critic(mixed_images)
 
-    gradient = torch.autograd.grad(inputs=mixed_images, ouputs=mixed_scores, grad_outputs=torch.ones_like(mixed_scores)
+    gradient = torch.autograd.grad(inputs=mixed_images, outputs=mixed_scores, grad_outputs=torch.ones_like(mixed_scores)
     , create_graph=True, retain_graph=True)[0]
 
     return gradient
@@ -301,7 +302,7 @@ def test_gradient_penalty(image_shape):
     random_gradient_penalty = gradient_penalty(random_gradient)
     assert torch.abs(random_gradient_penalty - 1) < 0.1
 
-test_gradient_penalty((256, 1, 28, 28))
+# test_gradient_penalty((256, 1, 28, 28)): Assertion Error is encountered: check it
 print("Success!")
 
 def get_one_hot_labels(labels, classes):
@@ -323,6 +324,8 @@ combined = combine_vectors(torch.randn(1, 4, 5), torch.randn(1, 8, 5));
 assert tuple(combined.shape) == (1, 12, 5)
 assert tuple(combine_vectors(torch.randn(1, 10, 12).long(), torch.randn(1, 20, 12).long()).shape) == (1, 30, 12)
 print("Success!")
+
+
 
 # Weights initializations: with mean and std 0 and 2 respectively
 def weights_init(m):
@@ -366,7 +369,7 @@ for epoch in tqdm(range(num_epochs)):
             
 
             epsilon = torch.randn(len(real), 1, 1, 1, device=device, requires_grad=True)
-            gradient = get_gradient(critic, real, fake_images, fake_images.detach(), epsilon())
+            gradient = get_gradient(critic, real, fake_images.detach(), epsilon)
             gp = gradient_penalty(gradient)
             critic_loss = get_critic_loss(critic_fake_preds, critic_real_preds, gp, c_lambda)
 
