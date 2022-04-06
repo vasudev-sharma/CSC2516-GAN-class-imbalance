@@ -7,7 +7,7 @@ from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-from scripts.utils import get_inception_model, preprocess, get_covariance, frechet_distance
+from scripts.utils import get_inception_model, preprocess, get_covariance, frechet_distance, save_models
 
 torch.manual_seed(0)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -199,8 +199,8 @@ beta1 = 0.5
 beta2 = 0.999
 
 transform = transforms.Compose([
-    transforms.Resize(299),
-    transforms.CenterCrop(299),
+    # transforms.Resize(299),
+    # transforms.CenterCrop(299),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,)),
 ])
@@ -349,8 +349,6 @@ print("Success!")
 
 
 
-
-
 # Weights initializations: with mean and std 0 and 2 respectively
 def weights_init(m):
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
@@ -373,8 +371,8 @@ critic_repeats = 5
 c_lambda = 10
 critic_losses = []
 generator_losses = []
-fake_features_list = []
-real_features_list = []
+# fake_features_list = []
+# real_features_list = []
 
 for epoch in tqdm(range(num_epochs)):
     
@@ -383,7 +381,7 @@ for epoch in tqdm(range(num_epochs)):
         real = real.to(device)
 
         # FID
-        real_features_list += [get_inception_model(device=device)(real).detach().to('cpu')] # Move the features to cpu
+        # real_features_list += [get_inception_model(device=device)(real).detach().to('cpu')] # Move the features to cpu
 
         labels = labels.to(device)
 
@@ -404,9 +402,9 @@ for epoch in tqdm(range(num_epochs)):
 
             fake_images = gen(fake_noise_combined)
 
-            # Preprocess the images for Inception network
-            fake_images_preprocess = preprocess(fake_images)
-            fake_features_list.append(get_inception_model(device=device)(fake_images_preprocess).detach().to('cpu'))
+            # Preprocess the images for Inception network -- FID
+            # fake_images_preprocess = preprocess(fake_images)
+            # fake_features_list.append(get_inception_model(device=device)(fake_images_preprocess).detach().to('cpu'))
 
 
             ## Sanity check
@@ -485,22 +483,8 @@ for epoch in tqdm(range(num_epochs)):
 print("Training is Completed ")    
 
 
-def compute_FID(real_features_list, fake_features_list):
-    # Concatenate the features
-    real_features_all = torch.cat(real_features_list)
-    fake_features_all = torch.cat(fake_features_list)
+#########################
+# Save Models
+#########################
 
-    # Mean and covariance
-    mu_fake = fake_features_all.mean(0)
-    mu_real = real_features_all.mean(0)
-    sigma_fake = get_covariance(fake_features_all)
-    sigma_real = get_covariance(real_features_all)
-
-    # Print FID
-    with torch.no_grad():
-        print(f'The frechet_distance is:  {frechet_distance(mu_real, mu_fake, sigma_real, sigma_fake).item()}')
-
-
-
-# Compute FID after training
-compute_FID(real_features_list, fake_features_list)
+save_models(gen, critic)

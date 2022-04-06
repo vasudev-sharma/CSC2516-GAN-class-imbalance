@@ -131,4 +131,57 @@ def get_covariance(features):
 
 def preprocess(img):
     return torch.nn.functional.interpolate(img, size=(299, 299), mode='bilinear', align_corners=False)
-    
+
+
+
+
+def compute_FID(real_features_list, fake_features_list):
+    # Concatenate the features
+    real_features_all = torch.cat(real_features_list)
+    fake_features_all = torch.cat(fake_features_list)
+
+    # Mean and covariance
+    mu_fake = fake_features_all.mean(0)
+    mu_real = real_features_all.mean(0)
+    sigma_fake = get_covariance(fake_features_all)
+    sigma_real = get_covariance(real_features_all)
+
+    # Print FID
+    with torch.no_grad():
+        print(f'The frechet_distance is:  {frechet_distance(mu_real, mu_fake, sigma_real, sigma_fake).item()}')
+
+
+def load_generator_and_discriminator(gen=None, disc=None, gen_pretrained_path='', disc_pretrained_path=''):
+    if gen is not None and disc is None:
+        gen.load_state_dict(torch.load(gen_pretrained_path))
+        return gen
+    elif disc is not None and gen is None:
+        disc.load_state_dict(torch.load(disc_pretrained_path))
+        return disc
+    elif not disc and not gen:
+        disc.load_state_dict(torch.load(disc_pretrained_path))
+        gen.load_state_dict(torch.load(gen_pretrained_path))
+        return disc, gen
+    else:
+        raise Exception("Generator and/or Discriminator are invalid")
+
+def save_models(gen=None, disc=None, gen_pretrained_path='', disc_pretrained_path=''):
+    if gen_pretrained_path == '':
+        gen_pretrained_path = os.path.join(os.getcwd(), 'gen.pth')
+        disc_pretrained_path = os.path.join(os.getcwd(), 'disc.pth')
+    if gen is not None and disc is None:
+        torch.save(gen.state_dict(gen_pretrained_path))
+        # return 
+    elif disc is not None and gen is None:
+        torch.save(disc.state_dict(disc_pretrained_path))
+        # return 
+    elif not disc and not gen:
+        torch.save(gen.state_dict(gen_pretrained_path))
+        torch.save(disc.state_dict(disc_pretrained_path))
+        # return
+    else:
+        raise Exception("Generator and/or Discriminator are invalid")
+        
+    print('...'*32)
+    print(f"Models Generator and discriminator have been saved {gen_pretrained_path} and {disc_pretrained_path} respectively")
+    print('...'*32)
