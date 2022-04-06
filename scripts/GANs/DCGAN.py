@@ -219,5 +219,30 @@ mean_generator_loss = 0.0
 
 for epoch in tqdm(range(num_epochs)):
     
-    for data, _ in tqdm(dataloder):
+    for real, _ in tqdm(dataloader):
+        curr_batch_size = len(real)
+        real = real.to(device)
+
+        # Update Discriminator
+        disc_opt.zero_grad()
+        fake_noise = get_noise(curr_batch_size, z_dim, device=device)
+        fake_images = gen(fake_noise)
+        fake_predictions = disc(fake_images.detach())
+        disc_fake_loss = criterion(fake_predictions, torch.zeros_like(fake_predictions))
+        real_predictions = disc(real)
+        disc_real_loss = criterion(real_predictions, torch.ones_like(real_predictions))
+
+        disc_loss = (disc_fake_loss + disc_real_loss) // 2
+
+        mean_discriminator_loss += disc_loss.item() / display_step
+        disc_loss.backward(retain_graph=True)
+        disc_opt.step()
+
+
+        # Update Generator
+        fake_noise - get_noise(curr_batch_size, z_dim, device=device)
+        fake_images = gen(fake_noise)
+        fake_predictions = disc(fake_images)
+        gen_loss = criterion(fake_predictions, torch.)
+
 
