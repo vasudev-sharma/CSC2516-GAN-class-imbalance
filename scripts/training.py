@@ -89,6 +89,8 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
             ds_covid = ImageFolder(path, transform=transform, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=3).float())
     
 
+    if with_gan:
+        return ds_covid
     # print("\nUsing labels: {}".format(train_filename))
     # sys.stdout.flush()
 

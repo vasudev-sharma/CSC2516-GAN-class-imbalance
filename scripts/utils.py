@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import torch
 from torchvision import models
@@ -192,3 +193,12 @@ def save_models(gen=None, disc=None, gen_pretrained_path='', disc_pretrained_pat
     print('...'*32)
     print(f"Models Generator and discriminator have been saved {gen_pretrained_path} and {disc_pretrained_path} respectively")
     print('...'*32)
+
+
+def gan_argparse():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', help = 'RSNA, COVID', type=str, required=False)
+
+    args = parser.parse_args()
+
+    return args
