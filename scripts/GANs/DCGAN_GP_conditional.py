@@ -201,6 +201,7 @@ beta2 = 0.999
 transform = transforms.Compose([
     # transforms.Resize(299),
     # transforms.CenterCrop(299),
+    transforms.Grayscale(num_output_channels=3),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,)),
 ])
@@ -233,10 +234,10 @@ wandb.config.update(config)
 
 dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
 
-generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(1, 28, 28), num_classes=10)
+generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=10)
 
 
-gen = Generator(generator_dim).to(device)
+gen = Generator(generator_dim, im_channel=3).to(device)
 gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
 critic = Critic(critic_dim).to(device)
 critic_opt = torch.optim.Adam(critic.parameters(), lr=lr, betas=(beta1, beta2))

@@ -38,5 +38,5 @@ pip install wandb
 # Downlaod inception_v3 weights
 wget 
 
-# eport to PYTHON to path
+# export PYTHON to path
 export PYTHONPATH="${PYTHONPATH}:/root/CSC2516-GAN-class-imbalance"

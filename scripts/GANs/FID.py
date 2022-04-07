@@ -10,7 +10,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--GAN_type', help = 'DCGAN, DCGAN_GP, SNGAN, DCGAN_GP_cond', type=str, required=False)
-parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, required=False)
+parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
 args = parser.parse_args()
 
 
@@ -20,10 +20,10 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 z_dim = 64
 batch_size = 128
 
-generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(1, 28, 28), num_classes=10)
+generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=10)
 
 # Load pretrained GAN
-gen = Generator(generator_dim).to(device)
+gen = Generator(generator_dim, im_channel=3).to(device)
 gen = load_generator_and_discriminator(gen=gen)
 gen = gen.eval()
 
@@ -33,17 +33,17 @@ inception_model = get_inception_model(device=device)
 # Transformation for MNIST
 
 transform = transforms.Compose([
-    transforms.Grayscale(num_output_channels=3),
-    transforms.Resize(299),
-    transforms.CenterCrop(299),
+    transforms.Grayscale(num_output_channels=3), # Inception net expected input
+    transforms.Resize(299), # Inception net expected input
+    transforms.CenterCrop(299), # Inception net expected input
     transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,)),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 ])
 
 if args.dataset == "MNIST":
     dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
 
-# TODO: Check if conditional noise vector and image is needed
+# TODO: Check if conditional noise vector and image contatenation is needed
 fake_features_list = []
 real_features_list = []
 with torch.no_grad():

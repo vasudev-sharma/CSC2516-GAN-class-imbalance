@@ -70,7 +70,7 @@ def get_inception_model(path=None, device=device):
     else:
         model = models.inception_v3(pretrained=False)
         model.load_state_dict(torch.load('/root/CSC2516-GAN-class-imbalance/inception_v3_google-1a9a5a14.pth'))
-    model.Conv2d_1a_3x3.conv = torch.nn.Conv2d(1, 32, kernel_size=3, stride=2, bias=False)
+    # model.Conv2d_1a_3x3.conv = torch.nn.Conv2d(1, 32, kernel_size=3, stride=2, bias=False)
     model.fc = torch.nn.Identity()
     model = model.to(device)
     model = model.eval()
