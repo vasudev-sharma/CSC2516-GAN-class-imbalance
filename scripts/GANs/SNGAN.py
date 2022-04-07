@@ -329,8 +329,8 @@ for epoch in tqdm(range(num_epochs)):
 
         if curr_step > 0 and curr_step % display_step == 0:
             print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
-            noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
-            fake_images = gen(noise_vectors)
+            # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
+            # fake_images = gen(noise_vectors)
             show_tensor_images(fake_images, type="fake")
             show_tensor_images(real, type="real")
             mean_generator_loss = 0

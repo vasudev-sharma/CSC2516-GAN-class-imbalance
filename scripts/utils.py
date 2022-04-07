@@ -154,6 +154,9 @@ def compute_FID(real_features_list, fake_features_list):
 
 
 def load_generator_and_discriminator(gen=None, disc=None, gen_pretrained_path='', disc_pretrained_path=''):
+    if gen_pretrained_path == '':
+        gen_pretrained_path = os.path.join(os.getcwd(), 'gen.pth')
+        disc_pretrained_path = os.path.join(os.getcwd(), 'disc.pth')
     if gen is not None and disc is None:
         gen.load_state_dict(torch.load(gen_pretrained_path))
         return gen
