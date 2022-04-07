@@ -90,7 +90,8 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
     
 
     if with_gan:
-        return ds_covid
+        return ds_covid, transform
+
     # print("\nUsing labels: {}".format(train_filename))
     # sys.stdout.flush()
 

@@ -8,9 +8,23 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 from scripts.utils import get_inception_model, preprocess, get_covariance, frechet_distance, save_models
+from scripts.training import load_data
+import argparse
+
 
 torch.manual_seed(0)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--with_gan', type=bool, default=True, required=False)
+parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
+
+args = parser.parse_args()
+
+
+
+
 
 
 def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake'):
@@ -198,13 +212,6 @@ batch_size = 128
 beta1 = 0.5
 beta2 = 0.999
 
-transform = transforms.Compose([
-    # transforms.Resize(299),
-    # transforms.CenterCrop(299),
-    transforms.Grayscale(num_output_channels=3),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,)),
-])
 
 def get_input_dimensions(z_dim, input_shape, num_classes):
     generator_input_dim = z_dim + num_classes
@@ -232,7 +239,22 @@ config = { 'num_epochs' : num_epochs,
 wandb.config.update(config)
 
 
-dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
+if args.dataset == "MNIST":
+
+    transform = transforms.Compose([
+        # transforms.Resize(299),
+        # transforms.CenterCrop(299),
+        transforms.Grayscale(num_output_channels=3),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,)),
+    ])
+    dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
+elif args.dataset == "COVID" or args.dataset == "COVID-small" or args.dataset == "RSNA":
+    load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="RSNA")
+    
+
+else:
+    raise Exception("Invalid Dataset Entered")
 
 generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=10)
 
