@@ -33,6 +33,7 @@ inception_model = get_inception_model(device=device)
 # Transformation for MNIST
 
 transform = transforms.Compose([
+    transforms.Grayscale(num_output_channels=3),
     transforms.Resize(299),
     transforms.CenterCrop(299),
     transforms.ToTensor(),
@@ -42,16 +43,18 @@ transform = transforms.Compose([
 if args.dataset == "MNIST":
     dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
 
+# TODO: Check if conditional noise vector and image is needed
 fake_features_list = []
 real_features_list = []
 with torch.no_grad():
         for real, labels in tqdm(dataloader):
             real_samples = real.to(device)
+            labels = labels.to(device)
 
             real_features = inception_model(real_samples).detach().to('cpu')
             real_features_list.append(real_features)
 
-            fake_noise = get_noise(len(real), z_dim).to(device)
+            fake_noise = get_noise(len(real), z_dim, device=device)
 
             # Conditional GAN on labels
             labels_one_hot = get_one_hot_labels(labels, classes=10)
