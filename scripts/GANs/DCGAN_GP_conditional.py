@@ -9,6 +9,8 @@ from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 from scripts.utils import get_inception_model, preprocess, get_covariance, frechet_distance, save_models
 from scripts.training import load_data
+from main import get_paths
+
 import argparse
 
 
@@ -19,6 +21,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--with_gan', type=bool, default=True, required=False)
 parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
+parser.add_argument('--user', type=str, required=True)
 
 args = parser.parse_args()
 
@@ -244,14 +247,16 @@ if args.dataset == "MNIST":
     transform = transforms.Compose([
         # transforms.Resize(299),
         # transforms.CenterCrop(299),
-        transforms.Grayscale(num_output_channels=3),
+        transforms.Grayscale(num_output_channels=3), # for FID
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,)),
     ])
     dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
+
 elif args.dataset == "COVID" or args.dataset == "COVID-small" or args.dataset == "RSNA":
-    load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="RSNA")
-    
+    data_path, output_path, model_path = get_paths(args, args.user)
+    ds, transform = load_data(data_path, dataset_size=None, with_gan=args.with_gan, data_aug=False, dataset=args.dataset)
+    dataloader = DataLoader(ds, transform=transform, shuffle=True)
 
 else:
     raise Exception("Invalid Dataset Entered")

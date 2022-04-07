@@ -97,29 +97,33 @@ wandb.init(entity='vs74', project='CSC2516')
 wandb.config.update(config)
 
 
-if user == "shobhita":
-    data_path = "/om/user/shobhita/src/chexpert/data/CheXpert-v1.0-small/"
-    output_path = "/om/user/shobhita/src/chexpert/output/output_{}/results/".format(dataset_size)
-    model_path = "/om/user/shobhita/src/chexpert/output/output_{}/models/".format(dataset_size)
-elif user == "neha":
-    data_path = "/local/nhulkund/UROP/Chexpert/data/CheXpert-v1.0-small/train.csv"
-    output_path = "/local/nhulkund/UROP/6.819FinalProjectRAMP/outputs"
-    model_path = output_path
-elif user == "vasu":
-    if FLAGS.dataset == "COVID":
-        data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
-        output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
+def get_paths(FLAGS, user):
+    if user == "shobhita":
+        data_path = "/om/user/shobhita/src/chexpert/data/CheXpert-v1.0-small/"
+        output_path = "/om/user/shobhita/src/chexpert/output/output_{}/results/".format(dataset_size)
+        model_path = "/om/user/shobhita/src/chexpert/output/output_{}/models/".format(dataset_size)
+    elif user == "neha":
+        data_path = "/local/nhulkund/UROP/Chexpert/data/CheXpert-v1.0-small/train.csv"
+        output_path = "/local/nhulkund/UROP/6.819FinalProjectRAMP/outputs"
         model_path = output_path
-    elif FLAGS.dataset == "RSNA":
-        data_path = "/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_images"
-        output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
-        model_path = output_path
-    elif FLAGS.dataset == "COVID-small":
-        data_path = "/root/CSC2516-GAN-class-imbalance/data/COVID-19/X-Ray Image DataSet"
-        output_path = "/root/CSC2516-GAN-class-imbalance/data/COVID-19/ouputs"
-        model_path = output_path
-else:
-    raise Exception("Invalid user")
+    elif user == "vasu":
+        if FLAGS.dataset == "COVID":
+            data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
+            output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
+            model_path = output_path
+        elif FLAGS.dataset == "RSNA":
+            data_path = "/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_images"
+            output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
+            model_path = output_path
+        elif FLAGS.dataset == "COVID-small":
+            data_path = "/root/CSC2516-GAN-class-imbalance/data/COVID-19/X-Ray Image DataSet"
+            output_path = "/root/CSC2516-GAN-class-imbalance/data/COVID-19/ouputs"
+            model_path = output_path
+    else:
+        raise Exception("Invalid user")
+    return data_path,output_path,model_path
+
+data_path, output_path, model_path = get_paths(FLAGS, user)
 
 model_name = "densenet_{}_{}".format(idx, with_gan)
 
