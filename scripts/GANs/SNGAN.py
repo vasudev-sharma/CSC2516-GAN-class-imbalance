@@ -194,7 +194,13 @@ def weights_init(m):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
 
+    parser.add_argument('--with_gan', type=bool, default=True, required=False)
+    parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
+    parser.add_argument('--user', type=str, required=True)
+
+    args = parser.parse_args()
 
     ## Test Discriminator
     gen = Generator()
