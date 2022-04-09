@@ -94,6 +94,7 @@ def get_paths(FLAGS, user):
             model_path = output_path
     else:
         raise Exception("Invalid user")
+
     return data_path,output_path,model_path
 
 
@@ -212,58 +213,58 @@ if __name__ == "__main__":
 
     model = get_model(num_classes=num_classes)
 
-if not skip_training:
-    print("TRAINING")
-    best_valid_loss, best_epoch = training(
-        model=model,
-        num_epochs=FLAGS.epochs,
-        model_path=model_path,
-        model_name=model_name,
-        train_loader=dataLoaderTrain,
-        valid_loader=dataLoaderVal,
-        lr=lr,
-        optimizer=optimizer,
-        dataset=FLAGS.dataset
-    )
+    if not skip_training:
+        print("TRAINING")
+        best_valid_loss, best_epoch = training(
+            model=model,
+            num_epochs=FLAGS.epochs,
+            model_path=model_path,
+            model_name=model_name,
+            train_loader=dataLoaderTrain,
+            valid_loader=dataLoaderVal,
+            lr=lr,
+            optimizer=optimizer,
+            dataset=FLAGS.dataset
+        )
 
-    # EPOCH = 10
-    # PATH = model_path + "{}_checkpt.pt".format(model_name)
-    #
-    # torch.save({
-    #             'epoch': EPOCH,
-    #             'model_state_dict': model.state_dict(),
-    #             'optimizer_state_dict': optimizer.state_dict()
-    #             }, PATH)
-else:
-    model.to(device)
-    print("SKIPPED TRAINING")
-sys.stdout.flush()
+        # EPOCH = 10
+        # PATH = model_path + "{}_checkpt.pt".format(model_name)
+        #
+        # torch.save({
+        #             'epoch': EPOCH,
+        #             'model_state_dict': model.state_dict(),
+        #             'optimizer_state_dict': optimizer.state_dict()
+        #             }, PATH)
+    else:
+        model.to(device)
+        print("SKIPPED TRAINING")
+    sys.stdout.flush()
 
-model.load_state_dict(torch.load(model_path + model_name))
+    model.load_state_dict(torch.load(model_path + model_name))
 
-# class_names=['Enlarged Cardiomediastinum', 'Cardiomegaly',
-#        'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia',
-#        'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other',
-#        'Fracture', 'Support Devices']
-
-
-# class_names = ['Normal', 'Pneumonia']
-
-class_names = list(map(str, range(num_classes)))
+    # class_names=['Enlarged Cardiomediastinum', 'Cardiomegaly',
+    #        'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia',
+    #        'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other',
+    #        'Fracture', 'Support Devices']
 
 
-print("TESTING")
-sys.stdout.flush()
-auc_results = testing(model, dataLoaderTest, len(class_names), class_names, dataset=FLAGS.dataset)
+    # class_names = ['Normal', 'Pneumonia']
 
-output = {}
-if not skip_training:
-    output["best_epoch"] = best_epoch
-    output["validation_loss"] = best_valid_loss
-output["params"] = model_params
-output["auc"] = auc_results
+    class_names = list(map(str, range(num_classes)))
 
-with open(output_path + "{}_{}_results2.pkl".format(idx, with_gan), "wb") as handle:
-    pickle.dump(output, handle)
 
-print("Done :)")
+    print("TESTING")
+    sys.stdout.flush()
+    auc_results = testing(model, dataLoaderTest, len(class_names), class_names, dataset=FLAGS.dataset)
+
+    output = {}
+    if not skip_training:
+        output["best_epoch"] = best_epoch
+        output["validation_loss"] = best_valid_loss
+    output["params"] = model_params
+    output["auc"] = auc_results
+
+    with open(output_path + "{}_{}_results2.pkl".format(idx, with_gan), "wb") as handle:
+        pickle.dump(output, handle)
+
+    print("Done :)")

@@ -73,6 +73,7 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
                                                     transforms.RandomVerticalFlip()])
             ds_covid = ImageFolder(path, transform=transform, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=3).float())
     else:
+        
         if dataset == "COVID":
             ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
                                         csvpath=train_filename, transform=transform)
@@ -90,6 +91,25 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
     
 
     if with_gan:
+        transform = torchvision.transforms.Compose([transforms.Grayscale(num_output_channels=3),
+                                                xrv.datasets.XRayCenterCrop(),
+                                                xrv.datasets.XRayResizer(28)])
+        if dataset == "COVID":
+            ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
+                                        csvpath=train_filename, transform=transform)
+        elif dataset == "RSNA":
+            ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
+                                    csvpath=train_filename, transform=transform, extension='.dcm')
+        elif dataset == "COVID-small":
+            # TODO: Have same transforms
+            # Better performance is without data aug --> need to check why
+            transform = torchvision.transforms.Compose([ transforms.Grayscale(num_output_channels=3),
+                                                transforms.CenterCrop(28),
+                                                transforms.Resize(28),
+                                                transforms.ToTensor()])
+            ds_covid = ImageFolder(path, transform=transform)
+    
+
         return ds_covid, transform
 
     # print("\nUsing labels: {}".format(train_filename))
@@ -290,8 +310,6 @@ def testing(model, test_loader, nnClassCount, class_names, dataset="COVID"):
             out = model(data)
             outPRED = torch.cat((outPRED, out), 0)
 
-    # print(outPRED.shape, "outpred")
-    # print(outGT.shape, "outgt")
     aurocIndividual = computeAUROC(outGT, outPRED, nnClassCount)
     aurocMean = np.array(aurocIndividual).mean()
 

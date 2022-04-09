@@ -7,8 +7,26 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 from scripts.utils import save_models
+from scripts.training import load_data
+from main import get_paths
+
+
+
+
 torch.manual_seed(0)
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+import argparse
+
+parser = argparse.ArgumentParser()
+
+
+parser.add_argument('--with_gan', type=bool, default=True, required=False)
+parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
+parser.add_argument('--user', type=str, required=True)
+
+args = parser.parse_args()
 
 
 def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake'):
@@ -66,7 +84,7 @@ class Generator(nn.Module):
 def get_noise(n_samples, z_dim, device='cpu'):
     return torch.randn(n_samples, z_dim, device=device)
 
-
+'''
 ## Test Discriminator
 gen = Generator()
 num_test = 100
@@ -109,7 +127,7 @@ assert gen_output.std() < 0.8
 print("Success!")
 
 
-
+'''
 
 
 class Discriminator(nn.Module):
@@ -138,88 +156,51 @@ class Discriminator(nn.Module):
         disc_pred = self.disc(inputs)
         return disc_pred.view(len(disc_pred), -1)
 
-
+'''
 # Test your make_disc_block() function
 
 num_test = 100
 
-gen = Generator()
-disc = Discriminator()
+gen = Generator(im_channel=3)
+disc = Discriminator(im_channel=3)
 test_images = gen(get_noise(num_test, gen.z_dim))
 
 # Test the hidden block
 test_hidden_block = disc.make_disc_block(1, 5, kernel_size=6, stride=3)
-hidden_output = test_hidden_block(test_images)
+# hidden_output = test_hidden_block(test_images)
 
 # Test the final block
-test_final_block = disc.make_disc_block(1, 10, kernel_size=2, stride=5, final_layer=True)
-final_output = test_final_block(test_images)
+# test_final_block = disc.make_disc_block(1, 10, kernel_size=2, stride=5, final_layer=True)
+# final_output = test_final_block(test_images)
 
 # Test the whole thing:
-disc_output = disc(test_images)
+# disc_output = disc(test_images)
 
 
-# Test the hidden block
-assert tuple(hidden_output.shape) == (num_test, 5, 8, 8)
-# Because of the LeakyReLU slope
-assert -hidden_output.min() / hidden_output.max() > 0.15
-assert -hidden_output.min() / hidden_output.max() < 0.25
-assert hidden_output.std() > 0.5
-assert hidden_output.std() < 1
+# # Test the hidden block
+# assert tuple(hidden_output.shape) == (num_test, 5, 8, 8)
+# # Because of the LeakyReLU slope
+# assert -hidden_output.min() / hidden_output.max() > 0.15
+# assert -hidden_output.min() / hidden_output.max() < 0.25
+# assert hidden_output.std() > 0.5
+# assert hidden_output.std() < 1
 
-# Test the final block
+# # Test the final block
 
-assert tuple(final_output.shape) == (num_test, 10, 6, 6)
-assert final_output.max() > 1.0
-assert final_output.min() < -1.0
-assert final_output.std() > 0.3
-assert final_output.std() < 0.6
+# assert tuple(final_output.shape) == (num_test, 10, 6, 6)
+# assert final_output.max() > 1.0
+# assert final_output.min() < -1.0
+# assert final_output.std() > 0.3
+# assert final_output.std() < 0.6
 
-# Test the whole thing:
+# # Test the whole thing:
 
-assert tuple(disc_output.shape) == (num_test, 1)
-assert disc_output.std() > 0.25
-assert disc_output.std() < 0.5
-print("Success!")
+# assert tuple(disc_output.shape) == (num_test, 1)
+# assert disc_output.std() > 0.25
+# assert disc_output.std() < 0.5
+# print("Success!")
 
-
-
-# Hyperparameters and loss
-criterion = nn.BCEWithLogitsLoss()
-num_epochs = 200
-z_dim = 64
-display_step = 500
-lr = 2e-4
-device = 'cuda'
-batch_size = 128
-
-
-beta1 = 0.5
-beta2 = 0.999
-
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,)),
-])
-
-wandb.init(entity='vs74', project='GAN')
-config = { 'num_epochs' : num_epochs,
-'z_dim' : z_dim,
-'display_step' : display_step,
-'lr' : lr,
-'device' : device,
-'batch_size' : batch_size,
-    }
-wandb.config.update(config)
-
-
-dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
-
-gen = Generator(z_dim).to(device)
-gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
-disc = Discriminator().to(device)
-disc_opt = torch.optim.Adam(disc.parameters(), lr=lr, betas=(beta1, beta2))
-
+'''
 
 def get_gradient(critic, real, fake, epsilon):
     """ Returns the critic scores with respect to the mixes of fake and real images
@@ -274,77 +255,150 @@ def weights_init(m):
         torch.nn.init.constant_(m.bias, 0)
 
 
-gen = gen.apply(weights_init)
-disc = disc.apply(weights_init)
 
-# num_epochs = 50
-mean_discriminator_loss = 0.0 
-mean_generator_loss = 0.0 
-curr_step = 0
+if __name__ == "__main__":
+
+        
+    # Hyperparameters and loss
+    criterion = nn.BCEWithLogitsLoss()
+    num_epochs = 200
+    z_dim = 64
+    display_step = 500
+    lr = 2e-4
+    device = 'cuda'
+    batch_size = 128
 
 
-for epoch in tqdm(range(num_epochs)):
+    beta1 = 0.5
+    beta2 = 0.999
+
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+
+    wandb.init(entity='vs74', project='GAN')
+    config = { 'num_epochs' : num_epochs,
+    'z_dim' : z_dim,
+    'display_step' : display_step,
+    'lr' : lr,
+    'device' : device,
+    'batch_size' : batch_size,
+        }
+    wandb.config.update(config)
+
+
+    num_classes = {"MNIST": 10,
+                    "COVID": 25,
+                    "COVID-small": 3,
+                    "RSNA": 2}
+
+    if args.dataset == "MNIST":
+
+        transform = transforms.Compose([
+            # transforms.Resize(299),
+            # transforms.CenterCrop(299),
+            transforms.Grayscale(num_output_channels=3), # for FID
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,)),
+        ])
+        dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
+        # generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=10)
+
+    elif args.dataset == "COVID" or args.dataset == "COVID-small" or args.dataset == "RSNA":
+        data_path, output_path, model_path = get_paths(args, args.user)
+        ds, transform = load_data(data_path, dataset_size=None, with_gan=args.with_gan, data_aug=False, dataset=args.dataset)
+        dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True)
+
+        # TODO: Play with different size of the generated image
+        # generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=num_classes[args.dataset])
+
+    else:
+        raise Exception("Invalid Dataset Entered")
+
+
+
+        
+
+    gen = Generator(z_dim, im_channel=3).to(device)
+    gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
+    disc = Discriminator(im_channel=3).to(device)
+    disc_opt = torch.optim.Adam(disc.parameters(), lr=lr, betas=(beta1, beta2))
+
     
-    for real, _ in tqdm(dataloader):
-        curr_batch_size = len(real)
-        real = real.to(device)
+    
+    gen = gen.apply(weights_init)
+    disc = disc.apply(weights_init)
 
-        # Update Discriminator
-        disc_opt.zero_grad()
-        fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-        fake_images = gen(fake_noise)
-        fake_predictions = disc(fake_images.detach())
-        disc_fake_loss = criterion(fake_predictions, torch.zeros_like(fake_predictions))
-        real_predictions = disc(real)
-        disc_real_loss = criterion(real_predictions, torch.ones_like(real_predictions))
-
-        disc_loss = (disc_fake_loss + disc_real_loss) / 2
-
-        mean_discriminator_loss += disc_loss.item() / display_step
-        disc_loss.backward(retain_graph=True)
-        disc_opt.step()
+    # num_epochs = 50
+    mean_discriminator_loss = 0.0 
+    mean_generator_loss = 0.0 
+    curr_step = 0
 
 
-        # Update Generator
-        gen_opt.zero_grad()
-        fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-        fake_images = gen(fake_noise)
-        fake_predictions = disc(fake_images)
-        gen_loss = criterion(fake_predictions, torch.ones_like(fake_predictions))
+    for epoch in tqdm(range(num_epochs)):
+        
+        for real, _ in tqdm(dataloader):
+            curr_batch_size = len(real)
+            real = real.to(device)
 
-        gen_loss.backward()
-        gen_opt.step()
+            # Update Discriminator
+            disc_opt.zero_grad()
+            fake_noise = get_noise(curr_batch_size, z_dim, device=device)
+            fake_images = gen(fake_noise)
+            fake_predictions = disc(fake_images.detach())
+            disc_fake_loss = criterion(fake_predictions, torch.zeros_like(fake_predictions))
+            real_predictions = disc(real)
+            disc_real_loss = criterion(real_predictions, torch.ones_like(real_predictions))
 
-        mean_generator_loss += gen_loss.item() / display_step
+            disc_loss = (disc_fake_loss + disc_real_loss) / 2
 
-
-        # Log into wandb
-        wandb.log({
-            "epoch": epoch,
-            "Generator Loss": mean_generator_loss,
-            "Discriminator Loss": mean_discriminator_loss
-        })
-
-        # Visualization code
-
-        if curr_step > 0 and curr_step % display_step == 0:
-            print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
-            # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
-            # fake_images = gen(noise_vectors)
-            show_tensor_images(fake_images, type="fake")
-            show_tensor_images(real, type="real")
-            mean_generator_loss = 0
-            mean_discriminator_loss = 0
-
-        curr_step += 1
-
-print("Training is Completed ")    
+            mean_discriminator_loss += disc_loss.item() / display_step
+            disc_loss.backward(retain_graph=True)
+            disc_opt.step()
 
 
-#################################
-# Save Models and log onto wandb
-#################################
+            # Update Generator
+            gen_opt.zero_grad()
+            fake_noise = get_noise(curr_batch_size, z_dim, device=device)
+            fake_images = gen(fake_noise)
+            fake_predictions = disc(fake_images)
+            gen_loss = criterion(fake_predictions, torch.ones_like(fake_predictions))
 
-save_models(gen=gen, disc=disc)
+            gen_loss.backward()
+            gen_opt.step()
+
+            mean_generator_loss += gen_loss.item() / display_step
+
+
+            # Log into wandb
+            wandb.log({
+                "epoch": epoch,
+                "Generator Loss": mean_generator_loss,
+                "Discriminator Loss": mean_discriminator_loss
+            })
+
+            # Visualization code
+
+            if curr_step > 0 and curr_step % display_step == 0:
+                print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
+                # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
+                # fake_images = gen(noise_vectors)
+                show_tensor_images(fake_images, type="fake")
+                show_tensor_images(real, type="real")
+                mean_generator_loss = 0
+                mean_discriminator_loss = 0
+
+            curr_step += 1
+
+    print("Training is Completed ")    
+
+
+    #################################
+    # Save Models and log onto wandb
+    #################################
+
+    save_models(gen=gen, disc=disc)
 
 

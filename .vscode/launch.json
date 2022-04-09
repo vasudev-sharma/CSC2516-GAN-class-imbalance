@@ -12,7 +12,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--user", "vasu", "--dataset", "COVID-small", "--with-GAN", "True"]
+            "args": ["--user", "vasu", "--dataset", "COVID-small", "--with_gan", "True"]
         }
     ]
 }
