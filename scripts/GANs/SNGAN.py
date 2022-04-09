@@ -67,47 +67,6 @@ def get_noise(n_samples, z_dim, device='cpu'):
     return torch.randn(n_samples, z_dim, device=device)
 
 
-## Test Discriminator
-gen = Generator()
-num_test = 100
-
-# Test the hidden block
-test_hidden_noise = get_noise(num_test, gen.z_dim)
-test_hidden_block = gen.make_gen_block(10, 20, kernel_size=4, stride=1)
-test_uns_noise = gen.unsqueeze_noise(test_hidden_noise)
-hidden_output = test_hidden_block(test_uns_noise)
-
-# Check that it works with other strides
-test_hidden_block_stride = gen.make_gen_block(20, 20, kernel_size=4, stride=2)
-
-test_final_noise = get_noise(num_test, gen.z_dim) * 20
-test_final_block = gen.make_gen_block(10, 20, final_layer=True)
-test_final_uns_noise = gen.unsqueeze_noise(test_final_noise)
-final_output = test_final_block(test_final_uns_noise)
-
-# Test the whole thing:
-test_gen_noise = get_noise(num_test, gen.z_dim)
-test_uns_gen_noise = gen.unsqueeze_noise(test_gen_noise)
-gen_output = gen(test_uns_gen_noise)
-
-# UNIT TESTS
-assert tuple(hidden_output.shape) == (num_test, 20, 4, 4)
-assert hidden_output.max() > 1
-assert hidden_output.min() == 0
-assert hidden_output.std() > 0.2
-assert hidden_output.std() < 1
-assert hidden_output.std() > 0.5
-
-assert tuple(test_hidden_block_stride(hidden_output).shape) == (num_test, 20, 10, 10)
-
-assert final_output.max().item() == 1
-assert final_output.min().item() == -1
-
-assert tuple(gen_output.shape) == (num_test, 1, 28, 28)
-assert gen_output.std() > 0.5
-assert gen_output.std() < 0.8
-print("Success!")
-
 
 
 
@@ -139,12 +98,7 @@ class Discriminator(nn.Module):
         return disc_pred.view(len(disc_pred), -1)
 
 
-# Test your make_disc_block() function
 
-num_test = 100
-
-gen = Generator()
-disc = Discriminator()
 '''test_images = gen(get_noise(num_test, gen.z_dim))
 
 # Test the hidden block
@@ -183,42 +137,6 @@ assert disc_output.std() < 0.5
 print("Success!")
 '''
 
-
-# Hyperparameters and loss
-criterion = nn.BCEWithLogitsLoss()
-num_epochs = 200
-z_dim = 64
-display_step = 500
-lr = 2e-4
-device = 'cuda'
-batch_size = 128
-
-
-beta1 = 0.5
-beta2 = 0.999
-
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,)),
-])
-
-wandb.init(entity='vs74', project='GAN')
-config = { 'num_epochs' : num_epochs,
-'z_dim' : z_dim,
-'display_step' : display_step,
-'lr' : lr,
-'device' : device,
-'batch_size' : batch_size,
-    }
-wandb.config.update(config)
-
-
-dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
-
-gen = Generator(z_dim).to(device)
-gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
-disc = Discriminator().to(device)
-disc_opt = torch.optim.Adam(disc.parameters(), lr=lr, betas=(beta1, beta2))
 
 
 def get_gradient(critic, real, fake, epsilon):
@@ -274,77 +192,237 @@ def weights_init(m):
         torch.nn.init.constant_(m.bias, 0)
 
 
-gen = gen.apply(weights_init)
-disc = disc.apply(weights_init)
 
-# num_epochs = 50
-mean_discriminator_loss = 0.0 
-mean_generator_loss = 0.0 
-curr_step = 0
+if __name__ == "__main__":
 
 
-for epoch in tqdm(range(num_epochs)):
-    
-    for real, _ in tqdm(dataloader):
-        curr_batch_size = len(real)
-        real = real.to(device)
+    ## Test Discriminator
+    gen = Generator()
+    num_test = 100
 
-        # Update Discriminator
-        disc_opt.zero_grad()
-        fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-        fake_images = gen(fake_noise)
-        fake_predictions = disc(fake_images.detach())
-        disc_fake_loss = criterion(fake_predictions, torch.zeros_like(fake_predictions))
-        real_predictions = disc(real)
-        disc_real_loss = criterion(real_predictions, torch.ones_like(real_predictions))
+    # Test the hidden block
+    test_hidden_noise = get_noise(num_test, gen.z_dim)
+    test_hidden_block = gen.make_gen_block(10, 20, kernel_size=4, stride=1)
+    test_uns_noise = gen.unsqueeze_noise(test_hidden_noise)
+    hidden_output = test_hidden_block(test_uns_noise)
 
-        disc_loss = (disc_fake_loss + disc_real_loss) / 2
+    # Check that it works with other strides
+    test_hidden_block_stride = gen.make_gen_block(20, 20, kernel_size=4, stride=2)
 
-        mean_discriminator_loss += disc_loss.item() / display_step
-        disc_loss.backward(retain_graph=True)
-        disc_opt.step()
+    test_final_noise = get_noise(num_test, gen.z_dim) * 20
+    test_final_block = gen.make_gen_block(10, 20, final_layer=True)
+    test_final_uns_noise = gen.unsqueeze_noise(test_final_noise)
+    final_output = test_final_block(test_final_uns_noise)
+
+    # Test the whole thing:
+    test_gen_noise = get_noise(num_test, gen.z_dim)
+    test_uns_gen_noise = gen.unsqueeze_noise(test_gen_noise)
+    gen_output = gen(test_uns_gen_noise)
+
+    # UNIT TESTS
+    assert tuple(hidden_output.shape) == (num_test, 20, 4, 4)
+    assert hidden_output.max() > 1
+    assert hidden_output.min() == 0
+    assert hidden_output.std() > 0.2
+    assert hidden_output.std() < 1
+    assert hidden_output.std() > 0.5
+
+    assert tuple(test_hidden_block_stride(hidden_output).shape) == (num_test, 20, 10, 10)
+
+    assert final_output.max().item() == 1
+    assert final_output.min().item() == -1
+
+    assert tuple(gen_output.shape) == (num_test, 1, 28, 28)
+    assert gen_output.std() > 0.5
+    assert gen_output.std() < 0.8
+    print("Success!")
+
+    # Test your make_disc_block() function
+
+    num_test = 100
+
+    gen = Generator()
+    disc = Discriminator()
+
+    # Hyperparameters and loss
+    criterion = nn.BCEWithLogitsLoss()
+    num_epochs = 200
+    z_dim = 64
+    display_step = 500
+    lr = 2e-4
+    device = 'cuda'
+    batch_size = 128
 
 
-        # Update Generator
-        gen_opt.zero_grad()
-        fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-        fake_images = gen(fake_noise)
-        fake_predictions = disc(fake_images)
-        gen_loss = criterion(fake_predictions, torch.ones_like(fake_predictions))
+    beta1 = 0.5
+    beta2 = 0.999
 
-        gen_loss.backward()
-        gen_opt.step()
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,)),
+    ])
 
-        mean_generator_loss += gen_loss.item() / display_step
+    wandb.init(entity='vs74', project='GAN')
+    config = { 'num_epochs' : num_epochs,
+    'z_dim' : z_dim,
+    'display_step' : display_step,
+    'lr' : lr,
+    'device' : device,
+    'batch_size' : batch_size,
+        }
+    wandb.config.update(config)
 
 
-        # Log into wandb
-        wandb.log({
-            "epoch": epoch,
-            "Generator Loss": mean_generator_loss,
-            "Discriminator Loss": mean_discriminator_loss
-        })
+    dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
 
-        # Visualization code
-
-        if curr_step > 0 and curr_step % display_step == 0:
-            print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
-            # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
-            # fake_images = gen(noise_vectors)
-            show_tensor_images(fake_images, type="fake")
-            show_tensor_images(real, type="real")
-            mean_generator_loss = 0
-            mean_discriminator_loss = 0
-
-        curr_step += 1
-
-print("Training is Completed ")    
+    gen = Generator(z_dim).to(device)
+    gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
+    disc = Discriminator().to(device)
+    disc_opt = torch.optim.Adam(disc.parameters(), lr=lr, betas=(beta1, beta2))
 
 
 
-#################################
-# Save Models and log onto wandb
-#################################
+    gen = gen.apply(weights_init)
+    disc = disc.apply(weights_init)
 
-save_models(gen=gen, disc=disc)
+    # num_epochs = 50
+    mean_discriminator_loss = 0.0 
+    mean_generator_loss = 0.0 
+    curr_step = 0
+
+
+    for epoch in tqdm(range(num_epochs)):
+        
+        for real, _ in tqdm(dataloader):
+            curr_batch_size = len(real)
+            real = real.to(device)
+
+            # Update Discriminator
+            disc_opt.zero_grad()
+            fake_noise = get_noise(curr_batch_size, z_dim, device=device)
+            fake_images = gen(fake_noise)
+            fake_predictions = disc(fake_images.detach())
+            disc_fake_loss = criterion(fake_predictions, torch.zeros_like(fake_predictions))
+            real_predictions = disc(real)
+            disc_real_loss = criterion(real_predictions, torch.ones_like(real_predictions))
+
+            disc_loss = (disc_fake_loss + disc_real_loss) / 2
+
+            mean_discriminator_loss += disc_loss.item() / display_step
+            disc_loss.backward(retain_graph=True)
+            disc_opt.step()
+
+
+            # Update Generator
+            gen_opt.zero_grad()
+            fake_noise = get_noise(curr_batch_size, z_dim, device=device)
+            fake_images = gen(fake_noise)
+            fake_predictions = disc(fake_images)
+            gen_loss = criterion(fake_predictions, torch.ones_like(fake_predictions))
+
+            gen_loss.backward()
+            gen_opt.step()
+
+            mean_generator_loss += gen_loss.item() / display_step
+
+
+            # Log into wandb
+            wandb.log({
+                "epoch": epoch,
+                "Generator Loss": mean_generator_loss,
+                "Discriminator Loss": mean_discriminator_loss
+            })
+
+            # Visualization code
+
+            if curr_step > 0 and curr_step % display_step == 0:
+                print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
+                # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
+                # fake_images = gen(noise_vectors)
+                show_tensor_images(fake_images, type="fake")
+                show_tensor_images(real, type="real")
+                mean_generator_loss = 0
+                mean_discriminator_loss = 0
+
+            curr_step += 1
+
+    print("Training is Completed ")    
+
+
+
+
+
+    gen = gen.apply(weights_init)
+    disc = disc.apply(weights_init)
+
+    # num_epochs = 50
+    mean_discriminator_loss = 0.0 
+    mean_generator_loss = 0.0 
+    curr_step = 0
+
+
+    for epoch in tqdm(range(num_epochs)):
+        
+        for real, _ in tqdm(dataloader):
+            curr_batch_size = len(real)
+            real = real.to(device)
+
+            # Update Discriminator
+            disc_opt.zero_grad()
+            fake_noise = get_noise(curr_batch_size, z_dim, device=device)
+            fake_images = gen(fake_noise)
+            fake_predictions = disc(fake_images.detach())
+            disc_fake_loss = criterion(fake_predictions, torch.zeros_like(fake_predictions))
+            real_predictions = disc(real)
+            disc_real_loss = criterion(real_predictions, torch.ones_like(real_predictions))
+
+            disc_loss = (disc_fake_loss + disc_real_loss) / 2
+
+            mean_discriminator_loss += disc_loss.item() / display_step
+            disc_loss.backward(retain_graph=True)
+            disc_opt.step()
+
+
+            # Update Generator
+            gen_opt.zero_grad()
+            fake_noise = get_noise(curr_batch_size, z_dim, device=device)
+            fake_images = gen(fake_noise)
+            fake_predictions = disc(fake_images)
+            gen_loss = criterion(fake_predictions, torch.ones_like(fake_predictions))
+
+            gen_loss.backward()
+            gen_opt.step()
+
+            mean_generator_loss += gen_loss.item() / display_step
+
+
+            # Log into wandb
+            wandb.log({
+                "epoch": epoch,
+                "Generator Loss": mean_generator_loss,
+                "Discriminator Loss": mean_discriminator_loss
+            })
+
+            # Visualization code
+
+            if curr_step > 0 and curr_step % display_step == 0:
+                print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
+                # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
+                # fake_images = gen(noise_vectors)
+                show_tensor_images(fake_images, type="fake")
+                show_tensor_images(real, type="real")
+                mean_generator_loss = 0
+                mean_discriminator_loss = 0
+
+            curr_step += 1
+
+    print("Training is Completed ")    
+
+
+
+    #################################
+    # Save Models and log onto wandb
+    #################################
+
+    save_models(gen=gen, disc=disc)
 
