@@ -23,10 +23,11 @@ For more info, read about the arguments `$ python main.py --help`
 ## GANs: TODO
 | **GAN** | **Path** | **Loss** |
 | :---- | :-----: | -----: |
-|DCGAN|`scripts/DCGAN.py`| BCE Loss|
-|DCGAN with GP|`scripts/DCGAN_GP.py`| W-Loss + Gradient Penalty|
-| Conditional DCGAN with GP | `scripts/DCGAN_GP_conditional.py`| W-Loss + Gradient Penalty|
-| SNGAN | `scripts/SNGAN_conditional.py` | Spectral Normalization | 
+|DCGAN|`scripts/GANs/DCGAN.py`| BCE Loss|
+|DCGAN with GP|`scripts/GANs/DCGAN_GP.py`| W-Loss + Gradient Penalty|
+| Conditional DCGAN with GP | `scripts/GANs/DCGAN_GP_conditional.py`| W-Loss + Gradient Penalty|
+| SNGAN | `scripts/GANs/SNGAN.py` | Spectral Normalization | 
+| LSGAN | `scripts/GANs/LSGAN.py` | Least Sqaures GAN | 
 
 ## Acknowledgements: TODO
 This repository makes use of the code from the following repositories. We thank all the authors for making their code publically available.

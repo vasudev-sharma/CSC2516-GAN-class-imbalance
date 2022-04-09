@@ -28,8 +28,6 @@ args = parser.parse_args()
 
 
 
-
-
 def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake'):
     ''' Function for visualizing images
     '''
