@@ -12,7 +12,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args":["--GAN_type", "DCGAN", "--dataset", "MNIST"]
+            "args": ["--user", "vasu", "--dataset", "COVID-small", "--with-GAN", "True"]
         }
     ]
 }
