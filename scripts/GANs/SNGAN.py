@@ -8,6 +8,7 @@ from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 from scripts.utils import save_models
 torch.manual_seed(0)
+import argparse
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 

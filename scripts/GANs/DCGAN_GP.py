@@ -69,46 +69,6 @@ def get_noise(n_samples, z_dim, device='cpu'):
     return torch.randn(n_samples, z_dim, device=device)
 
 
-## Test Discriminator
-gen = Generator()
-num_test = 100
-
-# Test the hidden block
-test_hidden_noise = get_noise(num_test, gen.z_dim)
-test_hidden_block = gen.make_gen_block(10, 20, kernel_size=4, stride=1)
-test_uns_noise = gen.unsqueeze_noise(test_hidden_noise)
-hidden_output = test_hidden_block(test_uns_noise)
-
-# Check that it works with other strides
-test_hidden_block_stride = gen.make_gen_block(20, 20, kernel_size=4, stride=2)
-
-test_final_noise = get_noise(num_test, gen.z_dim) * 20
-test_final_block = gen.make_gen_block(10, 20, final_layer=True)
-test_final_uns_noise = gen.unsqueeze_noise(test_final_noise)
-final_output = test_final_block(test_final_uns_noise)
-
-# Test the whole thing:
-test_gen_noise = get_noise(num_test, gen.z_dim)
-test_uns_gen_noise = gen.unsqueeze_noise(test_gen_noise)
-gen_output = gen(test_uns_gen_noise)
-
-# UNIT TESTS
-assert tuple(hidden_output.shape) == (num_test, 20, 4, 4)
-assert hidden_output.max() > 1
-assert hidden_output.min() == 0
-assert hidden_output.std() > 0.2
-assert hidden_output.std() < 1
-assert hidden_output.std() > 0.5
-
-assert tuple(test_hidden_block_stride(hidden_output).shape) == (num_test, 20, 10, 10)
-
-assert final_output.max().item() == 1
-assert final_output.min().item() == -1
-
-assert tuple(gen_output.shape) == (num_test, 1, 28, 28)
-assert gen_output.std() > 0.5
-assert gen_output.std() < 0.8
-print("Success!")
 
 
 class Critic(nn.Module):
@@ -184,42 +144,6 @@ print("Success!")
 '''
 
 
-# Hyperparameters and loss
-criterion = nn.BCEWithLogitsLoss()
-num_epochs = 200
-z_dim = 64
-display_step = 500
-lr = 2e-4
-device = 'cuda'
-batch_size = 128
-
-
-beta1 = 0.5
-beta2 = 0.999
-
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,)),
-])
-
-wandb.init(entity='vs74', project='GAN')
-config = { 'num_epochs' : num_epochs,
-'z_dim' : z_dim,
-'display_step' : display_step,
-'lr' : lr,
-'device' : device,
-'batch_size' : batch_size,
-    }
-wandb.config.update(config)
-
-
-dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
-
-gen = Generator(z_dim).to(device)
-gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
-critic = Critic().to(device)
-critic_opt = torch.optim.Adam(critic.parameters(), lr=lr, betas=(beta1, beta2))
-
 
 def get_gradient(critic, real, fake, epsilon):
     """ Returns the critic scores with respect to the mixes of fake and real images
@@ -287,8 +211,7 @@ def test_get_gradient(image_shape):
     assert gradient.min() < 0
     return gradient
 
-gradient = test_get_gradient((256, 1, 28, 28))
-print("Success!")
+
 def test_gradient_penalty(image_shape):
     bad_gradient = torch.zeros(*image_shape)
     bad_gradient_penalty = gradient_penalty(bad_gradient)
@@ -304,7 +227,6 @@ def test_gradient_penalty(image_shape):
     assert torch.abs(random_gradient_penalty - 1) < 0.1
 
 # test_gradient_penalty((256, 1, 28, 28)): Assertion Error is encountered: check it
-print("Success!")
 
 def get_one_hot_labels(labels, classes):
     return F.one_hot(labels, num_classes=classes)
@@ -315,16 +237,6 @@ def combine_vectors(x, y):
 
     return torch.cat([x.float(), y.float()], dim=1)
 
-combined = combine_vectors(torch.tensor([[1, 2], [3, 4]]), torch.tensor([[5, 6], [7, 8]]));
-# Check exact order of elements
-assert torch.all(combined == torch.tensor([[1, 2, 5, 6], [3, 4, 7, 8]]))
-# Tests that items are of float type
-assert (type(combined[0][0].item()) == float)
-# Check shapes
-combined = combine_vectors(torch.randn(1, 4, 5), torch.randn(1, 8, 5));
-assert tuple(combined.shape) == (1, 12, 5)
-assert tuple(combine_vectors(torch.randn(1, 10, 12).long(), torch.randn(1, 20, 12).long()).shape) == (1, 30, 12)
-print("Success!")
 
 
 
@@ -337,93 +249,191 @@ def weights_init(m):
         torch.nn.init.constant_(m.bias, 0)
 
 
-gen = gen.apply(weights_init)
-critic = critic.apply(weights_init)
-
-# num_epochs = 50
-mean_critic_loss = 0.0 
-mean_generator_loss = 0.0 
-curr_step = 0
+if __name__ == "__main__":
 
 
-critic_repeats = 5
-c_lambda = 10
-critic_losses = []
-generator_losses = []
-
-
-for epoch in tqdm(range(num_epochs)):
+    ## Test Discriminator
     
-    for real, _ in tqdm(dataloader):
-        curr_batch_size = len(real)
-        real = real.to(device)
+    gen = Generator()
+    num_test = 100
 
-        mean_critic_loss = 0.0
-        for _ in range(critic_repeats):
+    # Test the hidden block
+    test_hidden_noise = get_noise(num_test, gen.z_dim)
+    test_hidden_block = gen.make_gen_block(10, 20, kernel_size=4, stride=1)
+    test_uns_noise = gen.unsqueeze_noise(test_hidden_noise)
+    hidden_output = test_hidden_block(test_uns_noise)
 
-            # Update Critic
-            critic_opt.zero_grad()
+    # Check that it works with other strides
+    test_hidden_block_stride = gen.make_gen_block(20, 20, kernel_size=4, stride=2)
+
+    test_final_noise = get_noise(num_test, gen.z_dim) * 20
+    test_final_block = gen.make_gen_block(10, 20, final_layer=True)
+    test_final_uns_noise = gen.unsqueeze_noise(test_final_noise)
+    final_output = test_final_block(test_final_uns_noise)
+
+    # Test the whole thing:
+    test_gen_noise = get_noise(num_test, gen.z_dim)
+    test_uns_gen_noise = gen.unsqueeze_noise(test_gen_noise)
+    gen_output = gen(test_uns_gen_noise)
+
+    # UNIT TESTS
+    assert tuple(hidden_output.shape) == (num_test, 20, 4, 4)
+    assert hidden_output.max() > 1
+    assert hidden_output.min() == 0
+    assert hidden_output.std() > 0.2
+    assert hidden_output.std() < 1
+    assert hidden_output.std() > 0.5
+
+    assert tuple(test_hidden_block_stride(hidden_output).shape) == (num_test, 20, 10, 10)
+
+    assert final_output.max().item() == 1
+    assert final_output.min().item() == -1
+
+    assert tuple(gen_output.shape) == (num_test, 1, 28, 28)
+    assert gen_output.std() > 0.5
+    assert gen_output.std() < 0.8
+    print("Success!")
+    gradient = test_get_gradient((256, 1, 28, 28))
+    print("Success!")
+    print("Success!")
+
+
+    # Hyperparameters and loss
+    criterion = nn.BCEWithLogitsLoss()
+    num_epochs = 200
+    z_dim = 64
+    display_step = 500
+    lr = 2e-4
+    device = 'cuda'
+    batch_size = 128
+
+
+    beta1 = 0.5
+    beta2 = 0.999
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,)),
+    ])
+
+    wandb.init(entity='vs74', project='GAN')
+    config = { 'num_epochs' : num_epochs,
+    'z_dim' : z_dim,
+    'display_step' : display_step,
+    'lr' : lr,
+    'device' : device,
+    'batch_size' : batch_size,
+        }
+    wandb.config.update(config)
+
+
+    dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
+
+    gen = Generator(z_dim).to(device)
+    gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
+    critic = Critic().to(device)
+    critic_opt = torch.optim.Adam(critic.parameters(), lr=lr, betas=(beta1, beta2))
+
+
+    combined = combine_vectors(torch.tensor([[1, 2], [3, 4]]), torch.tensor([[5, 6], [7, 8]]));
+    # Check exact order of elements
+    assert torch.all(combined == torch.tensor([[1, 2, 5, 6], [3, 4, 7, 8]]))
+    # Tests that items are of float type
+    assert (type(combined[0][0].item()) == float)
+    # Check shapes
+    combined = combine_vectors(torch.randn(1, 4, 5), torch.randn(1, 8, 5));
+    assert tuple(combined.shape) == (1, 12, 5)
+    assert tuple(combine_vectors(torch.randn(1, 10, 12).long(), torch.randn(1, 20, 12).long()).shape) == (1, 30, 12)
+    print("Success!")
+
+
+    gen = gen.apply(weights_init)
+    critic = critic.apply(weights_init)
+
+    # num_epochs = 50
+    mean_critic_loss = 0.0 
+    mean_generator_loss = 0.0 
+    curr_step = 0
+
+
+    critic_repeats = 5
+    c_lambda = 10
+    critic_losses = []
+    generator_losses = []
+
+
+    for epoch in tqdm(range(num_epochs)):
+        
+        for real, _ in tqdm(dataloader):
+            curr_batch_size = len(real)
+            real = real.to(device)
+
+            mean_critic_loss = 0.0
+            for _ in range(critic_repeats):
+
+                # Update Critic
+                critic_opt.zero_grad()
+                fake_noise = get_noise(curr_batch_size, z_dim, device=device)
+                fake_images = gen(fake_noise)
+                critic_fake_preds = critic(fake_images.detach())
+                critic_real_preds = critic(real)
+                
+
+                epsilon = torch.randn(len(real), 1, 1, 1, device=device, requires_grad=True)
+                gradient = get_gradient(critic, real, fake_images.detach(), epsilon)
+                gp = gradient_penalty(gradient)
+                critic_loss = get_critic_loss(critic_fake_preds, critic_real_preds, gp, c_lambda)
+
+                mean_critic_loss += critic_loss.item() / critic_repeats
+
+                # Update graidents
+                critic_loss.backward(retain_graph=True)
+                critic_opt.step()
+            critic_losses += [mean_critic_loss]
+
+
+
+            # Update Generator
+            gen_opt.zero_grad()
+
             fake_noise = get_noise(curr_batch_size, z_dim, device=device)
             fake_images = gen(fake_noise)
-            critic_fake_preds = critic(fake_images.detach())
-            critic_real_preds = critic(real)
-            
+            fake_predictions = critic(fake_images)
 
-            epsilon = torch.randn(len(real), 1, 1, 1, device=device, requires_grad=True)
-            gradient = get_gradient(critic, real, fake_images.detach(), epsilon)
-            gp = gradient_penalty(gradient)
-            critic_loss = get_critic_loss(critic_fake_preds, critic_real_preds, gp, c_lambda)
+            gen_loss = get_gen_loss(fake_predictions)
 
-            mean_critic_loss += critic_loss.item() / critic_repeats
+            gen_loss.backward()
+            gen_opt.step()
 
-            # Update graidents
-            critic_loss.backward(retain_graph=True)
-            critic_opt.step()
-        critic_losses += [mean_critic_loss]
+            generator_losses += [gen_loss.item()]
 
 
+            # Log into wandb
+            wandb.log({
+                "epoch": epoch,
+                "Generator Loss": sum(generator_losses) / len(generator_losses),
+                "Discriminator Loss": sum(critic_losses) / len(critic_losses)
+            })
 
-        # Update Generator
-        gen_opt.zero_grad()
+            # Visualization code
 
-        fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-        fake_images = gen(fake_noise)
-        fake_predictions = critic(fake_images)
+            if curr_step > 0 and curr_step % display_step == 0:
+                print(f'Step: {curr_step} | Generator Loss:{sum(generator_losses[-display_step:]) / display_step} | Discriminator Loss: {sum(critic_losses[-display_step:]) / display_step}')
+                # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
+                # fake_images = gen(noise_vectors)
+                show_tensor_images(fake_images, type="fake")
+                show_tensor_images(real, type="real")
 
-        gen_loss = get_gen_loss(fake_predictions)
+                # mean_generator_loss = 0.0
+                # mean_discriminator_loss = 0.0
 
-        gen_loss.backward()
-        gen_opt.step()
+            curr_step += 1
 
-        generator_losses += [gen_loss.item()]
-
-
-        # Log into wandb
-        wandb.log({
-            "epoch": epoch,
-            "Generator Loss": sum(generator_losses) / len(generator_losses),
-            "Discriminator Loss": sum(critic_losses) / len(critic_losses)
-        })
-
-        # Visualization code
-
-        if curr_step > 0 and curr_step % display_step == 0:
-            print(f'Step: {curr_step} | Generator Loss:{sum(generator_losses[-display_step:]) / display_step} | Discriminator Loss: {sum(critic_losses[-display_step:]) / display_step}')
-            # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
-            # fake_images = gen(noise_vectors)
-            show_tensor_images(fake_images, type="fake")
-            show_tensor_images(real, type="real")
-
-            # mean_generator_loss = 0.0
-            # mean_discriminator_loss = 0.0
-
-        curr_step += 1
-
-print("Training is Completed ")    
+    print("Training is Completed ")    
 
 
-#################################
-# Save Models and log onto wandb
-#################################
+    #################################
+    # Save Models and log onto wandb
+    #################################
 
-save_models(gen=gen, disc=critic)
+    save_models(gen=gen, disc=critic)

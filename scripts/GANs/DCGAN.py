@@ -19,15 +19,6 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 import argparse
 
-parser = argparse.ArgumentParser()
-
-
-parser.add_argument('--with_gan', type=bool, default=True, required=False)
-parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
-parser.add_argument('--user', type=str, required=True)
-
-args = parser.parse_args()
-
 
 def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake'):
     ''' Function for visualizing images
@@ -257,6 +248,17 @@ def weights_init(m):
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+
+
+    parser.add_argument('--with_gan', type=bool, default=True, required=False)
+    parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
+    parser.add_argument('--user', type=str, required=True)
+
+    args = parser.parse_args()
+
+
 
         
     # Hyperparameters and loss
