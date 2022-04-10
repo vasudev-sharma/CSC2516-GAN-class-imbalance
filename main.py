@@ -54,18 +54,6 @@ def get_parser():
     FLAGS = parser.parse_args()
     return FLAGS
 
-
-
-# ADD SEED for consistent result
-SEED = 42
-np.random.seed(SEED)
-wandb.login()
-torch.manual_seed(SEED)
-random.seed(SEED)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.deterministic = False
-os.environ['PYTHONHASHSEED'] = str(SEED)
-
 def get_paths(FLAGS, user):
     if user == "shobhita":
         data_path = "/om/user/shobhita/src/chexpert/data/CheXpert-v1.0-small/"
@@ -77,12 +65,12 @@ def get_paths(FLAGS, user):
         model_path = output_path
     elif user == "vasu":
         if FLAGS.dataset == "COVID":
-            data_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/images"
-            output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
+            data_path = os.path.join(os.getcwd(), "data/covid-chestxray-dataset/images")
+            output_path = os.path.join(os.getcwd(), "data/covid-chestxray-dataset/outputs")
             model_path = output_path
         elif FLAGS.dataset == "RSNA":
-            data_path = "/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_images"
-            output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
+            data_path = os.path.join(os.getcwd(), "data/RSNA_Pneumonia/stage_2_train_images")
+            output_path = os.path.join(os.getcwd(), "data/covid-chestxray-dataset/outputs")
             model_path = output_path
         elif FLAGS.dataset == "COVID-small":
             data_path = os.path.join(os.getcwd(), "data/COVID-19/X-Ray Image DataSet")
@@ -95,6 +83,19 @@ def get_paths(FLAGS, user):
 
 
 if __name__ == "__main__":
+
+
+    # ADD SEED for consistent result
+    SEED = 42
+    np.random.seed(SEED)
+    wandb.login()
+    torch.manual_seed(SEED)
+    random.seed(SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.deterministic = False
+    os.environ['PYTHONHASHSEED'] = str(SEED)
+
+
     use_gpu = torch.cuda.is_available()
     print("Using GPU: {}".format(use_gpu))
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

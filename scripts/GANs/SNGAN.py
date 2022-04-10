@@ -3,6 +3,8 @@ import torch
 from tqdm.auto import tqdm
 import torch.nn as nn
 from torchvision import transforms, datasets
+from scripts.training import load_data
+from main import get_paths
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -280,8 +282,33 @@ if __name__ == "__main__":
         }
     wandb.config.update(config)
 
+    num_classes = {"MNIST": 10,
+                    "COVID": 25,
+                    "COVID-small": 3,
+                    "RSNA": 2}
 
-    dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
+    if args.dataset == "MNIST":
+
+        transform = transforms.Compose([
+            # transforms.Resize(299),
+            # transforms.CenterCrop(299),
+            transforms.Grayscale(num_output_channels=1), # for FID
+            transforms.ToTensor(),
+            transforms.Normalize((0.5), (0.5)),
+        ])
+        dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
+        # generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=10)
+
+    elif args.dataset == "COVID" or args.dataset == "COVID-small" or args.dataset == "RSNA":
+        data_path, output_path, model_path = get_paths(args, args.user)
+        ds, transform = load_data(data_path, dataset_size=None, with_gan=args.with_gan, data_aug=False, dataset=args.dataset)
+        dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True)
+
+        # TODO: Play with different size of the generated image
+        # generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=num_classes[args.dataset])
+
+    else:
+        raise Exception("Invalid Dataset Entered")
 
     gen = Generator(z_dim).to(device)
     gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))

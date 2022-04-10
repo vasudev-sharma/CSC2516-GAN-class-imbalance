@@ -1,7 +1,7 @@
 import wandb 
 import torch
 import torch.nn.functional as F
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import torch.nn as nn
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset
@@ -317,7 +317,7 @@ if __name__ == "__main__":
     test_uns_gen_noise = gen.unsqueeze_noise(test_gen_noise)
     gen_output = gen(test_uns_gen_noise)
 
-    # UNIT TESTS
+    '''# UNIT TESTS
     assert tuple(hidden_output.shape) == (num_test, 20, 4, 4)
     assert hidden_output.max() > 1
     assert hidden_output.min() == 0
@@ -333,16 +333,19 @@ if __name__ == "__main__":
     assert tuple(gen_output.shape) == (num_test, 1, 28, 28)
     assert gen_output.std() > 0.5
     assert gen_output.std() < 0.8
+'''
+
     print("Success!")
     # Hyperparameters and loss
     criterion = nn.BCEWithLogitsLoss()
-    num_epochs = 1
+    num_epochs = 200
     z_dim = 64
     display_step = 500
     lr = 2e-4
     device = 'cuda'
     batch_size = 128
 
+    im_channel = 1
 
     beta1 = 0.5
     beta2 = 0.999
@@ -372,12 +375,12 @@ if __name__ == "__main__":
         transform = transforms.Compose([
             # transforms.Resize(299),
             # transforms.CenterCrop(299),
-            transforms.Grayscale(num_output_channels=3), # for FID
+            transforms.Grayscale(num_output_channels=im_channel), # for FID
             transforms.ToTensor(),
             transforms.Normalize((0.5,), (0.5,)),
         ])
         dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
-        generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=10)
+        generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(im_channel, 28, 28), num_classes=num_classes[args.dataset])
 
     elif args.dataset == "COVID" or args.dataset == "COVID-small" or args.dataset == "RSNA":
         data_path, output_path, model_path = get_paths(args, args.user)
@@ -385,13 +388,13 @@ if __name__ == "__main__":
         dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True)
 
         # TODO: Play with different size of the generated image
-        generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=num_classes[args.dataset])
+        generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(im_channel, 28, 28), num_classes=num_classes[args.dataset])
 
     else:
         raise Exception("Invalid Dataset Entered")
 
 
-    gen = Generator(generator_dim, im_channel=3).to(device)
+    gen = Generator(generator_dim, im_channel=im_channel).to(device)
     gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
     critic = Critic(critic_dim).to(device)
     critic_opt = torch.optim.Adam(critic.parameters(), lr=lr, betas=(beta1, beta2))
@@ -533,3 +536,15 @@ if __name__ == "__main__":
     #################################
 
     save_models(gen=gen, disc=critic)
+
+
+    ################################
+    # Compute FID Score
+    ###############################
+
+    # Run the script FID.py
+
+
+
+
+

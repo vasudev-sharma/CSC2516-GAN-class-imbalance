@@ -1,5 +1,5 @@
 import torch
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import torch.nn as nn
 from scripts.utils import get_inception_model, preprocess, get_covariance, frechet_distance, load_generator_and_discriminator, compute_FID
 from torchvision import transforms

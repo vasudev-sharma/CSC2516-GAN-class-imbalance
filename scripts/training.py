@@ -3,7 +3,7 @@ import sys
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import wandb
-
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -20,7 +20,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from PIL import Image
 import torch.nn.functional as func
 import torchxrayvision as xrv
-# from tqdm.notebook import tqdm
+
 
 from sklearn.metrics import roc_auc_score
 import sklearn.metrics as metrics
@@ -46,9 +46,9 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
 
     # COVID train
     if dataset == 'COVID':
-        train_filename = '/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/metadata.csv'
+        train_filename = os.path.join(os.getcwd(), 'data/covid-chestxray-dataset/metadata.csv')
     elif dataset == "RSNA":
-        train_filename = '/root/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/stage_2_train_labels.csv'
+        train_filename = os.path.join(os.getcwd(), 'data/RSNA_Pneumonia/stage_2_train_labels.csv')
     if data_aug:
         transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
                                                 xrv.datasets.XRayResizer(224),
@@ -92,7 +92,7 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
 
     if with_gan:
         transform = torchvision.transforms.Compose([transforms.Grayscale(num_output_channels=3),
-                                                xrv.datasets.XRayCenterCrop(),
+                                                # xrv.datasets.XRayCenterCrop(),
                                                 xrv.datasets.XRayResizer(28)])
         if dataset == "COVID":
             ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
@@ -103,10 +103,11 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
         elif dataset == "COVID-small":
             # TODO: Have same transforms
             # Better performance is without data aug --> need to check why
-            transform = torchvision.transforms.Compose([ transforms.Grayscale(num_output_channels=3),
-                                                transforms.CenterCrop(28),
-                                                transforms.Resize(28),
-                                                transforms.ToTensor()])
+            transform = torchvision.transforms.Compose([ transforms.Grayscale(num_output_channels=1),
+                                                # transforms.CenterCrop(28),
+                                                transforms.Resize((28, 28)),
+                                                transforms.ToTensor(),
+                                                transforms.Normalize((0.5), (0.5,))])
             ds_covid = ImageFolder(path, transform=transform)
     
 

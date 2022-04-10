@@ -1,7 +1,7 @@
 import argparse
 import wandb 
 import torch
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import torch.nn as nn
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset

@@ -301,9 +301,9 @@ if __name__ == "__main__":
         transform = transforms.Compose([
             # transforms.Resize(299),
             # transforms.CenterCrop(299),
-            transforms.Grayscale(num_output_channels=3), # for FID
+            transforms.Grayscale(num_output_channels=1), # for FID
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            transforms.Normalize((0.5), (0.5)),
         ])
         dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
         # generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=10)
@@ -323,9 +323,9 @@ if __name__ == "__main__":
 
         
 
-    gen = Generator(z_dim, im_channel=3).to(device)
+    gen = Generator(z_dim).to(device)
     gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
-    disc = Discriminator(im_channel=3).to(device)
+    disc = Discriminator().to(device)
     disc_opt = torch.optim.Adam(disc.parameters(), lr=lr, betas=(beta1, beta2))
 
     
@@ -387,8 +387,8 @@ if __name__ == "__main__":
                 print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
                 # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
                 # fake_images = gen(noise_vectors)
-                show_tensor_images(fake_images, type="fake", size=(3, 28, 28))
-                show_tensor_images(real, type="real", size=(3, 28, 28))
+                show_tensor_images(fake_images, type="fake", size=(1, 28, 28))
+                show_tensor_images(real, type="real", size=(1, 28, 28))
                 mean_generator_loss = 0
                 mean_discriminator_loss = 0
 
