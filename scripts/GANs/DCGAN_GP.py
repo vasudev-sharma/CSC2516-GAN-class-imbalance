@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 from scripts.utils import save_models
 import matplotlib.pyplot as plt
-
+import os
 torch.manual_seed(0)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -257,7 +257,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--with_gan', type=bool, default=True, required=False)
     parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
-    parser.add_argument('--GAN_type', help = 'DCGAN, DCGAN_GP, SNGAN, DCGAN_GP_cond', type=str, required=False)
+    parser.add_argument('--GAN_type', help = 'DCGAN, DCGAN_GP, LSGAN, SNGAN, DCGAN_GP_conditional', type=str, required=False)
     parser.add_argument('--user', type=str, required=True)
 
     args = parser.parse_args()
@@ -317,6 +317,7 @@ if __name__ == "__main__":
     lr = 2e-4
     device = 'cuda'
     batch_size = 64
+
 
 
     beta1 = 0.5
@@ -474,5 +475,5 @@ if __name__ == "__main__":
     #################################
     # Save Models and log onto wandb
     #################################
-
+    model_path = os.path.join(model_path, args.GAN_type)
     save_models(gen=gen, disc=critic)

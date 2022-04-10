@@ -67,15 +67,15 @@ def get_paths(FLAGS, user):
         if FLAGS.dataset == "COVID":
             data_path = os.path.join(os.getcwd(), "data/covid-chestxray-dataset/images")
             output_path = os.path.join(os.getcwd(), "data/covid-chestxray-dataset/outputs")
-            model_path = output_path
+            model_path = os.path.join(os.getcwd(), "models/COVID-chest-xray")
         elif FLAGS.dataset == "RSNA":
             data_path = os.path.join(os.getcwd(), "data/RSNA_Pneumonia/stage_2_train_images")
             output_path = os.path.join(os.getcwd(), "data/covid-chestxray-dataset/outputs")
-            model_path = output_path
+            model_path = os.path.join(os.getcwd(), "models/RSNA")
         elif FLAGS.dataset == "COVID-small":
             data_path = os.path.join(os.getcwd(), "data/COVID-19/X-Ray Image DataSet")
             output_path = os.path.join(os.getcwd(), "data/COVID-19/ouputs")
-            model_path = output_path
+            model_path = os.path.join(os.getcwd(), "models/COVID-small")
     else:
         raise Exception("Invalid user")
 

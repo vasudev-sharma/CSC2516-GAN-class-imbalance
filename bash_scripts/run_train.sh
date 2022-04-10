@@ -4,5 +4,16 @@
 # python scripts/GANs/FID.py --dataset MNIST --user vasu --with_gan True
 # python scripts/GANs/DCGAN_GP_conditional.py --dataset MNIST --user vasu --with_gan True
 
+## MNIST 
 
-python scripts/GANs/DCGAN.py --dataset RSNA --user vasu --with_gan True
+# DCGAN
+python scripts/GANs/DCGAN.py --dataset MNIST --user vasu --with_gan True --epochs 200 --lr 2e-4 --display_step 200 --z_dim 64 --GAN_type DCGAN --batch_size 128 
+
+
+## COVID -19
+
+# DCGAN
+python scripts/GANs/DCGAN.py --dataset MNIST --user vasu --with_gan True --epochs 200 --lr 2e-4 --display_step 50 --z_dim 64 --GAN_type DCGAN --batch_size 16 
+
+
+# DCGAN_GP

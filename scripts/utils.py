@@ -170,6 +170,17 @@ def load_generator_and_discriminator(gen=None, disc=None, gen_pretrained_path=''
     else:
         raise Exception("Generator and/or Discriminator are invalid")
 
+
+
+def update_parser(parser):
+    parser.add_argument('--batch_size', help="Batch Size", type=int, required=False, default=32)
+    parser.add_argument('--lr', help="Learning Rate", type=float, required=False, default=1e-3)
+    parser.add_argument('--epochs', help="Total Number of Epochs", type=int, required=False, default=30)
+    parser.add_argument('--z_dim', help="Noise vector dimension", type=int, required=False, default=64)
+    parser.add_argument('--display_step', help="Display steps for logging", type=int, required=False, default=200)
+
+    return parser
+
 def save_models(gen=None, disc=None, gen_pretrained_path='', disc_pretrained_path=''):
     if gen_pretrained_path == '':
         gen_pretrained_path = os.path.join(os.getcwd(), 'gen.pth')
