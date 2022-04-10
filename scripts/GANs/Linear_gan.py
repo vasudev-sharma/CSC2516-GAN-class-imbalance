@@ -1,4 +1,4 @@
-
+import argparse
 import wandb 
 import torch
 from tqdm.auto import tqdm
@@ -7,9 +7,7 @@ from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-torch.manual_seed(0)
 
 def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake'):
     ''' Function for visualizing images
@@ -48,8 +46,6 @@ def test_generator_block(input_dim, output_dim):
     assert type(gen[2]) == nn.ReLU
 
     print(gen)
-
-test_generator_block(3, 5)
 
 
 
@@ -113,40 +109,6 @@ class Discriminator(nn.Module):
 
 
 
-## Training Loop
-
-
-# Hyperparameters and loss
-criterion = nn.BCEWithLogitsLoss()
-num_epochs = 200
-z_dim = 64
-display_step = 500
-lr = 1e-5
-device = 'cuda'
-batch_size = 128
-
-wandb.init(entity='vs74', project='GAN')
-config = { 'num_epochs' : num_epochs,
-'z_dim' : z_dim,
-'display_step' : display_step,
-'lr' : lr,
-'device' : device,
-'batch_size' : batch_size,
-    }
-
-wandb.config.update(config)
-
-# Dataloader
-dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transforms.ToTensor()), batch_size=batch_size, shuffle=True)
-
-# Initialize the networks
-gen = Generator(z_dim).to(device)
-gen_opt = torch.optim.Adam(gen.parameters(), lr=lr)
-
-disc = Discriminator().to(device)
-disc_opt = torch.optim.Adam(disc.parameters(), lr=lr)
-
-
 def get_disc_loss(gen, disc, z_dim, criterion, real_samples, num_images, device='cuda'):
     # Forward pass
     noise_vectors = get_noise(num_images, z_dim, device=device)
@@ -187,60 +149,110 @@ def get_gen_loss(gen, disc, z_dim, criterion, num_images, device='cuda'):
     return gen_loss
 
 
-
-mean_generator_loss = 0.0
-mean_discriminator_loss = 0.0
-curr_step = 0 
-
-for epoch in tqdm(range(num_epochs)):
+if __name__ == "__main__":
     
-    for real, _ in tqdm(dataloader):
-        current_batch_size = real.size(0)
-
-        # Flatten the image
-        real = real.view(current_batch_size, -1).to(device)
-
-        ## Update the discriminator first
-        disc_opt.zero_grad()
-
-        disc_loss = get_disc_loss(gen, disc, z_dim, criterion, real, current_batch_size, device=device)
-
-        # Discriminator Loss
-        disc_loss.backward(retain_graph=True)
-
-        disc_opt.step()
+    parser = argparse.ArgumentParser()
 
 
-        ## Update the Discriminator
-        gen_opt.zero_grad()
-        gen_loss = get_gen_loss(gen, disc, z_dim, criterion, current_batch_size, device='cuda')
-        gen_loss.backward()
-        gen_opt.step()
+    parser.add_argument('--with_gan', type=bool, default=True, required=False)
+    parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
+    parser.add_argument('--user', type=str, required=True)
+
+    args = parser.parse_args()
+
+    ## Training Loop
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    torch.manual_seed(0)
+
+    test_generator_block(3, 5)
 
 
-        ## Keep track of Discriminator and Generator Loss
-        mean_generator_loss += gen_loss.item() / display_step
+    # Hyperparameters and loss
+    criterion = nn.BCEWithLogitsLoss()
+    num_epochs = 200
+    z_dim = 64
+    display_step = 500
+    lr = 1e-5
+    device = 'cuda'
+    batch_size = 128
 
-        mean_discriminator_loss += disc_loss.item() / display_step
+    wandb.init(entity='vs74', project='GAN')
+    config = { 'num_epochs' : num_epochs,
+    'z_dim' : z_dim,
+    'display_step' : display_step,
+    'lr' : lr,
+    'device' : device,
+    'batch_size' : batch_size,
+        }
 
-        wandb.log({
-            "epoch": epoch,
-            "Generator Loss": mean_generator_loss,
-            "Discriminator Loss": mean_discriminator_loss
-        })
+    wandb.config.update(config)
 
-        if curr_step > 0 and curr_step % display_step == 0:
-            print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
-            noise_vectors = get_noise(current_batch_size, z_dim, device=device)
-            fake_images = gen(noise_vectors)
-            show_tensor_images(fake_images, type="fake")
-            show_tensor_images(real, type="real")
-            mean_generator_loss = 0
-            mean_discriminator_loss = 0
+    # Dataloader
+    dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transforms.ToTensor()), batch_size=batch_size, shuffle=True)
 
-        curr_step += 1
+    # Initialize the networks
+    gen = Generator(z_dim).to(device)
+    gen_opt = torch.optim.Adam(gen.parameters(), lr=lr)
 
-print("Training is Completed ")    
+    disc = Discriminator().to(device)
+    disc_opt = torch.optim.Adam(disc.parameters(), lr=lr)
+
+
+
+    mean_generator_loss = 0.0
+    mean_discriminator_loss = 0.0
+    curr_step = 0 
+
+    for epoch in tqdm(range(num_epochs)):
+        
+        for real, _ in tqdm(dataloader):
+            current_batch_size = real.size(0)
+
+            # Flatten the image
+            real = real.view(current_batch_size, -1).to(device)
+
+            ## Update the discriminator first
+            disc_opt.zero_grad()
+
+            disc_loss = get_disc_loss(gen, disc, z_dim, criterion, real, current_batch_size, device=device)
+
+            # Discriminator Loss
+            disc_loss.backward(retain_graph=True)
+
+            disc_opt.step()
+
+
+            ## Update the Discriminator
+            gen_opt.zero_grad()
+            gen_loss = get_gen_loss(gen, disc, z_dim, criterion, current_batch_size, device='cuda')
+            gen_loss.backward()
+            gen_opt.step()
+
+
+            ## Keep track of Discriminator and Generator Loss
+            mean_generator_loss += gen_loss.item() / display_step
+
+            mean_discriminator_loss += disc_loss.item() / display_step
+
+            wandb.log({
+                "epoch": epoch,
+                "Generator Loss": mean_generator_loss,
+                "Discriminator Loss": mean_discriminator_loss
+            })
+
+            if curr_step > 0 and curr_step % display_step == 0:
+                print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
+                noise_vectors = get_noise(current_batch_size, z_dim, device=device)
+                fake_images = gen(noise_vectors)
+                show_tensor_images(fake_images, type="fake")
+                show_tensor_images(real, type="real")
+                mean_generator_loss = 0
+                mean_discriminator_loss = 0
+
+            curr_step += 1
+
+    print("Training is Completed ")    
 
 
 

@@ -2,16 +2,13 @@
 import wandb
 import os
 import numpy as np
-import time
 import sys
-import csv
 import cv2
 import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
-import torchvision
 import torchvision.transforms as transforms
 import torch.optim as optim
 import torch.nn.functional as tfunc
@@ -22,7 +19,6 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from PIL import Image
 import torch.nn.functional as func
 import torchxrayvision as xrv
-from tqdm.auto import tqdm
 
 from sklearn.metrics import roc_auc_score
 import sklearn.metrics as metrics
@@ -89,8 +85,8 @@ def get_paths(FLAGS, user):
             output_path = "/root/CSC2516-GAN-class-imbalance/data/covid-chestxray-dataset/outputs"
             model_path = output_path
         elif FLAGS.dataset == "COVID-small":
-            data_path = "/root/CSC2516-GAN-class-imbalance/data/COVID-19/X-Ray Image DataSet"
-            output_path = "/root/CSC2516-GAN-class-imbalance/data/COVID-19/ouputs"
+            data_path = os.path.join(os.getcwd(), "data/COVID-19/X-Ray Image DataSet")
+            output_path = os.path.join(os.getcwd(), "data/COVID-19/ouputs")
             model_path = output_path
     else:
         raise Exception("Invalid user")

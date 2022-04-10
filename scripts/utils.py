@@ -97,7 +97,7 @@ def frechet_distance(mu_x, mu_y, sigma_x, sigma_y):
     return fid
 
 # UNIT TEST
-
+'''
 mean1 = torch.Tensor([0, 0]) # Center the mean at the origin
 covariance1 = torch.Tensor( # This matrix shows independence - there are only non-zero values on the diagonal
     [[1, 0],
@@ -126,7 +126,7 @@ assert (frechet_distance(
     ).item() == 0)
 
 print("Success!")
-
+'''
 def get_covariance(features):
     return torch.Tensor(np.cov(features.detach().numpy(), rowvar=False))
 
@@ -207,3 +207,6 @@ def gan_argparse():
     args = parser.parse_args()
 
     return args
+
+if __name__ == "__main__":
+    pass

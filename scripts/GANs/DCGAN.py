@@ -1,6 +1,6 @@
 import wandb 
 import torch
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import torch.nn as nn
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset
@@ -11,7 +11,7 @@ from scripts.training import load_data
 from main import get_paths
 
 
-
+# wandb.login(key=['202040aaac395bbf5a4a47d433a5335b74b7fb0e'])
 
 torch.manual_seed(0)
 
@@ -303,7 +303,7 @@ if __name__ == "__main__":
             # transforms.CenterCrop(299),
             transforms.Grayscale(num_output_channels=3), # for FID
             transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,)),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ])
         dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
         # generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=10)
@@ -387,8 +387,8 @@ if __name__ == "__main__":
                 print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
                 # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
                 # fake_images = gen(noise_vectors)
-                show_tensor_images(fake_images, type="fake")
-                show_tensor_images(real, type="real")
+                show_tensor_images(fake_images, type="fake", size=(3, 28, 28))
+                show_tensor_images(real, type="real", size=(3, 28, 28))
                 mean_generator_loss = 0
                 mean_discriminator_loss = 0
 
