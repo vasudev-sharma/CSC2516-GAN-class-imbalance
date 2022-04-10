@@ -9,11 +9,28 @@ import os
 import scipy.linalg
 from torch.distributions import MultivariateNormal
 import numpy as np
+import random
+import torch
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # Early stopping: Adapted from https://github.com/Bjarten/early-stopping-pytorch/blob/master/pytorchtools.py
+
+def get_deterministic_run(SEED=None):
+        # ADD SEED for consistent result
+    SEED = 42
+    np.random.seed(SEED)
+    wandb.login()
+    torch.manual_seed(SEED)
+    random.seed(SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.deterministic = False
+    os.environ['PYTHONHASHSEED'] = str(SEED)
+
+    return
+
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""

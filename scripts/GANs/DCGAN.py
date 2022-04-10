@@ -5,10 +5,10 @@ import torch
 from tqdm import tqdm
 import torch.nn as nn
 from torchvision import transforms, datasets
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-from scripts.utils import save_models, update_parser
+from scripts.utils import save_models, update_parser, get_deterministic_run
 from scripts.training import load_data
 from main import get_paths
 
@@ -251,6 +251,8 @@ def weights_init(m):
 
 if __name__ == "__main__":
 
+    get_deterministic_run()
+
     parser = argparse.ArgumentParser()
 
 
@@ -258,6 +260,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
     parser.add_argument('--GAN_type', help = 'DCGAN, DCGAN_GP, LSGAN, SNGAN, DCGAN_GP_conditional', type=str, required=False)
     parser.add_argument('--user', type=str, required=True)
+    parser.add_argument('--im_channel', type=int, required=False, default=1)
     parser = update_parser(parser)
 
     args = parser.parse_args()
@@ -279,28 +282,16 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     # print("Hello World")
 
-    im_channel = 1
+    im_channel = args.im_channel
 
     beta1 = 0.5
     beta2 = 0.999
 
 
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
-
 
     # wandb.login()
     wandb.init(entity='vs74', project='GAN')
-    config = { 'num_epochs' : num_epochs,
-    'z_dim' : z_dim,
-    'display_step' : display_step,
-    'lr' : lr,
-    'device' : device,
-    'batch_size' : batch_size,
-        }
-    wandb.config.update(config)
+    wandb.config.update(args)
 
 
     num_classes = {"MNIST": 10,
@@ -324,7 +315,7 @@ if __name__ == "__main__":
 
     elif args.dataset == "COVID" or args.dataset == "COVID-small" or args.dataset == "RSNA":
         data_path, output_path, model_path = get_paths(args, args.user)
-        ds, transform = load_data(data_path, dataset_size=None, with_gan=args.with_gan, data_aug=False, dataset=args.dataset)
+        ds, transform = load_data(data_path, dataset_size=None, with_gan=args.with_gan, data_aug=False, dataset=args.dataset, im_channel=args.im_channel)
         dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True)
 
         # TODO: Play with different size of the generated image

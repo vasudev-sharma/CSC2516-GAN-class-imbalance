@@ -34,7 +34,7 @@ from .utils import EarlyStopping
 use_gpu = torch.cuda.is_available()
 
 
-def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="RSNA"):
+def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="RSNA", im_channel=1):
     # add data augmentations transforms here
     # TRAIN_WITH_GAN_FILENAME = "train_preprocessed_subset_{}_with_gan.csv".format(dataset_size)
     # TRAIN_WITHOUT_GAN_FILENAME = "train_preprocessed_subset_{}.csv".format(dataset_size)
@@ -91,7 +91,7 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
     
 
     if with_gan:
-        transform = torchvision.transforms.Compose([transforms.Grayscale(num_output_channels=3),
+        transform = torchvision.transforms.Compose([transforms.Grayscale(num_output_channels=im_channel),
                                                 # xrv.datasets.XRayCenterCrop(),
                                                 xrv.datasets.XRayResizer(28)])
         if dataset == "COVID":
@@ -103,11 +103,14 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
         elif dataset == "COVID-small":
             # TODO: Have same transforms
             # Better performance is without data aug --> need to check why
-            transform = torchvision.transforms.Compose([ transforms.Grayscale(num_output_channels=1),
-                                                # transforms.CenterCrop(28),
-                                                transforms.Resize((28, 28)),
-                                                transforms.ToTensor(),
-                                                transforms.Normalize((0.5), (0.5,))])
+            transform = transforms.Compose([
+                                    # transforms.Resize(299),
+                                    # transforms.CenterCrop(299),
+                                    transforms.Resize((28, 28)),
+                                    transforms.Grayscale(num_output_channels=im_channel), # for FID
+                                    transforms.ToTensor(),
+                                    transforms.Normalize(tuple([0.5] * im_channel), tuple([0.5] * im_channel)),
+                                ])
             ds_covid = ImageFolder(path, transform=transform)
     
 
