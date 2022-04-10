@@ -1,4 +1,4 @@
-# Computer Vision Project: GAN-based Data Augmentation for Chest X-ray Classification
+# CSC2516: GAN-based Data Augmentation for Chest X-ray Classification
 
 
 
