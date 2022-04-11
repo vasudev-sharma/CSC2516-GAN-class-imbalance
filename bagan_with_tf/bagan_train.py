@@ -19,8 +19,6 @@ from utils import save_image_array
 
 import os
 
-
-
 if __name__ == '__main__':
     # Collect arguments
     argParser = OptionParser()
@@ -37,12 +35,12 @@ if __name__ == '__main__':
     argParser.add_option("-d", "--sampling_mode_for_discriminator", default="uniform",
                   action="store", type="string", dest="dratio_mode",
                   help="Dratio sampling mode (\"uniform\",\"rebalance\").")
-    # GABRIEL: what is uniform vs rebalance?
+    # GABRIEL: what is uniform vs rebalance?, Answer: uniform means using a uniform distribution.
 
     argParser.add_option("-g", "--sampling_mode_for_generator", default="uniform",
                   action="store", type="string", dest="gratio_mode",
                   help="Gratio sampling mode (\"uniform\",\"rebalance\").")
-    # GABRIEL: what is uniform vs rebalance?
+    # GABRIEL: what is uniform vs rebalance?, Answer: uniform means using a uniform distribution.
 
     argParser.add_option("-e", "--epochs", default=3,
                   action="store", type="int", dest="epochs",
@@ -66,8 +64,8 @@ if __name__ == '__main__':
     (options, args) = argParser.parse_args()
 
     assert (options.unbalance <= 1.0 and options.unbalance > 0.0), "Data unbalance factor must be > 0 and <= 1"
-    # GABRIEL: I think a factor closer to 0 means data contains more unbalance,
-    # closer 1 data is balanced
+    # GABRIEL: A factor closer to 0 means data contains more unbalance,
+    # while closer 1 data is balanced.
 
     print("Executing BAGAN.")
 
@@ -79,7 +77,7 @@ if __name__ == '__main__':
     gan_epochs = options.epochs
     adam_lr = options.adam_lr
     opt_class = options.target_class
-    batch_size = 128  # GABRIEL: minibatch
+    batch_size = 256#128  # GABRIEL: minibatch
     dataset_name = options.dataset
 
     # Set channels for mnist.
@@ -103,15 +101,16 @@ if __name__ == '__main__':
     print("input data loaded...")
 
     shape = bg_train_full.get_image_shape()
-    print("GABRIEL: shape: ", shape)
+    print("GABRIEL: get_image_shape(): ", shape)
 
     min_latent_res = shape[-1]  # GABRIEL: what is min_latent_res used for?
     while min_latent_res > 8:
         min_latent_res = min_latent_res / 2
     min_latent_res = int(min_latent_res)
+    print("GABRIEL: min_laten_res: ", min_latent_res)
 
     classes = bg_train_full.get_label_table()
-    print("GABRIEL: classes: ", classes)
+    print("GABRIEL: get_label_table(): ", classes)
 
     # Initialize statistics information
     gan_train_losses = defaultdict(list)
@@ -145,7 +144,6 @@ if __name__ == '__main__':
             os.path.exists("{}/class_0_generator.h5".format(res_dir, c)) and
             os.path.exists("{}/class_0_reconstructor.h5".format(res_dir, c))
         ):
-            print("ubalance == 1.0")
             # Without additional imbalance, BAGAN does not need to be retrained, we simlink the pregenerated model
             os.symlink("{}/class_0_score.csv".format(res_dir), "{}/class_{}_score.csv".format(res_dir, c))
             os.symlink("{}/class_0_discriminator.h5".format(res_dir), "{}/class_{}_discriminator.h5".format(res_dir, c))
@@ -173,7 +171,8 @@ if __name__ == '__main__':
 
             # Train GAN to balance the data
             # GABRIEL: 'bagan' comes from 'import'
-            # GABRIEL: target_classes VS c ??
+            # GABRIEL: target_classes VS c ? => target_classes = [0 1 2 ... 9]
+            # GABRIEL: current point
             gan = bagan.BalancingGAN(
                 target_classes, c, dratio_mode=dratio_mode, gratio_mode=gratio_mode,
                 adam_lr=adam_lr, res_dir=res_dir, image_shape=shape, min_latent_res=min_latent_res
@@ -186,7 +185,8 @@ if __name__ == '__main__':
         else:  # GAN pre-trained
             # Unbalance the training.
             print("Loading GAN for class {}".format(c))
-
+            
+            # GABRIEL: current point
             gan = bagan.BalancingGAN(target_classes, c, dratio_mode=dratio_mode, gratio_mode=gratio_mode,
                                      adam_lr=adam_lr, res_dir=res_dir, image_shape=shape, min_latent_res=min_latent_res)
             gan.load_models(

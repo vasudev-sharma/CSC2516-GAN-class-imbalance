@@ -11,7 +11,7 @@ import pickle
 from collections import defaultdict
 
 import keras.backend as K
-#K.set_image_dim_ordering('th') deprecated
+#K.set_image_dim_ordering('th') DEPRECATED
 K.set_image_data_format('channels_first')
 
 import keras
@@ -120,16 +120,21 @@ class BalancingGAN:
 
     # latent_size is the innermost latent vector size; min_latent_res is latent resolution (before the dense layer).
     def build_reconstructor(self, latent_size, min_latent_res=8):
+        print("GABRIEL: build_reconstructor()")
+        print("GABRIEL: latent_size=", latent_size, " , min_latent_res=", min_latent_res)
         resolution = self.resolution
         channels = self.channels
         image = Input(shape=(channels, resolution, resolution))
         features = self._build_common_encoder(image, min_latent_res)
+        print("GABRIEL: features=", features)
 
         # Reconstructor specific
+        # GABRIEL: Dense implements the operation: output = activation(dot(input, kernel) + bias)
         latent = Dense(latent_size, activation='linear')(features)
         self.reconstructor = Model(inputs=image, outputs=latent)
 
     def build_discriminator(self, min_latent_res=8):
+        print("GABRIEL: build_discriminator()")
         resolution = self.resolution
         channels = self.channels
         image = Input(shape=(channels, resolution, resolution))
@@ -161,26 +166,28 @@ class BalancingGAN:
     def discriminate(self, image):
         return self.discriminator(image)
 
+    # Set dratio_mode, and gratio_mode to 'rebalance' to bias the sampling toward the minority class
+    # No relevant difference noted
     def __init__(self, classes, target_class_id,
-                 # Set dratio_mode, and gratio_mode to 'rebalance' to bias the sampling toward the minority class
-                 # No relevant difference noted
                  dratio_mode="uniform", gratio_mode="uniform",
                  adam_lr=0.00005, latent_size=100,
                  res_dir = "./res-tmp", image_shape=[3,32,32], min_latent_res=8):
+        print("GABRIEL classes= ", classes, " ,target_class_id= ", target_class_id, " , dratio_mode= ", dratio_mode, " , latent_size= ", latent_size)
         self.gratio_mode = gratio_mode
         self.dratio_mode = dratio_mode
         self.classes = classes
         self.target_class_id = target_class_id  # target_class_id is used only during saving, not to overwrite other class results.
         self.nclasses = len(classes)
-        self.latent_size = latent_size
+        self.latent_size = latent_size # GABRIEL: what is this ?
         self.res_dir = res_dir
-        self.channels = image_shape[0]
-        self.resolution = image_shape[1]
+        self.channels = image_shape[0] # GABRIEL: what is this ?
+        self.resolution = image_shape[1] # GABRIEL: what is this ?
         if self.resolution != image_shape[2]:
             print("Error: only squared images currently supported by balancingGAN")
             exit(1)
 
         self.min_latent_res = min_latent_res
+        print("GABRIEL min_latent_res: ", min_latent_res)
 
         # Initialize learning variables
         self.adam_lr = adam_lr 
@@ -192,56 +199,77 @@ class BalancingGAN:
         self.trained = False
 
         # Build generator
+        # GABRIEL: you can config the model with losses and metrics with model.compile()
+        print("GABRIEL before build_generator()")
         self.build_generator(latent_size, init_resolution=min_latent_res)
+        print("GABRIEL: before compile, generator.trainable_weights=",len(self.generator.trainable_weights))
         self.generator.compile(
-            optimizer=Adam(lr=self.adam_lr, beta_1=self.adam_beta_1),
+            optimizer=Adam(learning_rate=self.adam_lr, beta_1=self.adam_beta_1),
             loss='sparse_categorical_crossentropy'
         )
+        print("GABRIEL: after compile, generator.trainable_weights=",len(self.generator.trainable_weights))
 
         latent_gen = Input(shape=(latent_size, ))
+        print("GABRIEL: latent_gen=", latent_gen)
 
         # Build discriminator
+        print("GABRIEL before build_discriminator()")
         self.build_discriminator(min_latent_res=min_latent_res)
+        print("GABRIEL: before compile, discriminator.trainable_weights=",len(self.discriminator.trainable_weights))
         self.discriminator.compile(
-            optimizer=Adam(lr=self.adam_lr, beta_1=self.adam_beta_1),
+            optimizer=Adam(learning_rate=self.adam_lr, beta_1=self.adam_beta_1),
             loss='sparse_categorical_crossentropy'
         )
-
+        print("GABRIEL: after compile, discriminator.trainable_weights=",len(self.discriminator.trainable_weights))
+        
         # Build reconstructor
         self.build_reconstructor(latent_size, min_latent_res=min_latent_res)
         self.reconstructor.compile(
-            optimizer=Adam(lr=self.adam_lr, beta_1=self.adam_beta_1),
+            optimizer=Adam(learning_rate=self.adam_lr, beta_1=self.adam_beta_1),
             loss='mean_squared_error'
         )
 
         # Define combined for training generator.
+        # GABRIEL: what is this for?
         fake = self.generator(latent_gen)
 
+        # GABRIEL: https://stackoverflow.com/questions/47204116/shouldnt-model-trainable-false-freeze-weights-under-the-model
         self.discriminator.trainable = False
         self.reconstructor.trainable = False
         self.generator.trainable = True
+        print("GABRIEL: after variable is set, discriminator.trainable_weights=",len(self.discriminator.trainable_weights))
+        
+        # GABRIEL: what is this for?
         aux = self.discriminate(fake)
 
+        # GABRIEL: what is this for?
         self.combined = Model(inputs=latent_gen, outputs=aux)
 
+        # GABRIEL: what is this for?
         self.combined.compile(
-            optimizer=Adam(lr=self.adam_lr, beta_1=self.adam_beta_1),
+            optimizer=Adam(learning_rate=self.adam_lr, beta_1=self.adam_beta_1),
             loss='sparse_categorical_crossentropy'
         )
 
         # Define initializer for autoencoder
+        # GABRIEL: https://stackoverflow.com/questions/47204116/shouldnt-model-trainable-false-freeze-weights-under-the-model
         self.discriminator.trainable = False
         self.generator.trainable = True
         self.reconstructor.trainable = True
 
+        # GABRIEL: what is this for?
         img_for_reconstructor = Input(shape=(self.channels, self.resolution, self.resolution,))
         img_reconstruct = self.generator(self.reconstructor(img_for_reconstructor))
 
         self.autoenc_0 = Model(inputs=img_for_reconstructor, outputs=img_reconstruct)
         self.autoenc_0.compile(
-            optimizer=Adam(lr=self.adam_lr, beta_1=self.adam_beta_1),
+            optimizer=Adam(learning_rate=self.adam_lr, beta_1=self.adam_beta_1),
             loss='mean_squared_error'
         )
+        print("End of INIT")
+        print("GABRIEL: discriminator.trainable_weights=",len(self.discriminator.trainable_weights))
+        print("GABRIEL: generator.trainable_weights=",len(self.generator.trainable_weights))
+        print("GABRIEL: reconstructor.trainable_weights=",len(self.reconstructor.trainable_weights))
 
     def _biased_sample_labels(self, samples, target_distribution="uniform"):
         distribution = self.class_uratio
@@ -260,10 +288,15 @@ class BalancingGAN:
         return sampled_labels
 
     def _train_one_epoch(self, bg_train):
+        #print("GABRIEL: enter _train_one_epoch()")
         epoch_disc_loss = []
         epoch_gen_loss = []
 
+        g_total_samples = 0
         for image_batch, label_batch in bg_train.next_batch():
+            #print("GABRIEL: image_batch.shape: ", image_batch.shape, " , label_batch.shape: ", label_batch.shape)
+            #print("GABRIEL: total samples: ", g_total_samples)
+            
 
             crt_batch_size = label_batch.shape[0]
 
@@ -273,20 +306,29 @@ class BalancingGAN:
             # sample some labels from p_c, then latent and images
             sampled_labels = self._biased_sample_labels(fake_size, "d")
             latent_gen = self.generate_latent(sampled_labels, bg_train)
+            #print("GABRIEL: self.generate_latent()")
 
             generated_images = self.generator.predict(latent_gen, verbose=0)
+            #print("GABRIEL: self.generator.predict()")
 
             X = np.concatenate((image_batch, generated_images))
             aux_y = np.concatenate((label_batch, np.full(len(sampled_labels) , self.nclasses )), axis=0)
 
+            #print("GABRIEL: X.shape=", X.shape, " , aux_y.shape=", aux_y.shape)
             epoch_disc_loss.append(self.discriminator.train_on_batch(X, aux_y))
+            #print("GABRIEL: self.discriminator.train_on_batch()")
 
             ################## Train Generator ##################
+            #print("GABRIEL: train generator")
             sampled_labels = self._biased_sample_labels(fake_size + crt_batch_size, "g")
+            #print("GABRIEL: self._biased_sample_labels()")
             latent_gen = self.generate_latent(sampled_labels, bg_train)
+            #print("GABRIEL: self.generate_latent()")
 
             epoch_gen_loss.append(self.combined.train_on_batch(
                 latent_gen, sampled_labels))
+            
+            #g_total_samples += 128
 
         # return statistics: generator loss,
         return (
@@ -468,6 +510,8 @@ class BalancingGAN:
         self.discriminator.save(discriminator_fname)
 
     def train(self, bg_train, bg_test, epochs=50):
+        print("GABRIEL: balancing_gan.py train()")
+        print("GABRIEL: bg_train= ", bg_train, " , bg_test=", bg_test)
         if not self.trained:
             self.autoenc_epochs = epochs
 
@@ -489,6 +533,7 @@ class BalancingGAN:
 
             crt_c = 0
             act_img_samples = bg_train.get_samples_for_class(crt_c, 10)
+            # GABRIEL: what is this for?
             img_samples = np.array([
                 [
                     act_img_samples,
@@ -500,6 +545,7 @@ class BalancingGAN:
                     self.generate_samples(crt_c, 10, bg_train)
                 ]
             ])
+            # GABRIEL: what is this for?
             for crt_c in range(1, self.nclasses):
                 act_img_samples = bg_train.get_samples_for_class(crt_c, 10)
                 new_samples = np.array([
@@ -528,16 +574,18 @@ class BalancingGAN:
                 print('GAN train epoch: {}/{}'.format(e+1, epochs))
                 # train_disc_loss, train_gen_loss = self._train_one_epoch(copy.deepcopy(bg_train))
                 train_disc_loss, train_gen_loss = self._train_one_epoch(bg_train)
+                print("GABRIEL _train_one_epoch()")
 
                 # Test: # generate a new batch of noise
                 nb_test = bg_test.get_num_samples()
                 fake_size = int(np.ceil(nb_test * 1.0/self.nclasses))
                 sampled_labels = self._biased_sample_labels(nb_test, "d")
                 latent_gen = self.generate_latent(sampled_labels, bg_test)
+                print("GABRIEL generate_latent()")
             
                 # sample some labels from p_c and generate images from them
-                generated_images = self.generator.predict(
-                    latent_gen, verbose=False)
+                generated_images = self.generator.predict(latent_gen, verbose=False)
+                print("GABRIEL generator.predict()")
             
                 X = np.concatenate( (bg_test.dataset_x, generated_images) )
                 aux_y = np.concatenate((bg_test.dataset_y, np.full(len(sampled_labels), self.nclasses )), axis=0)

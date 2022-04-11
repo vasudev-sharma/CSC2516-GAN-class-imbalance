@@ -11,6 +11,8 @@ http://www.eclipse.org/legal/epl-v10.html
 import tensorflow as tf
 import numpy as np
 
+
+
 class BatchGenerator:
 
     TRAIN = 1
@@ -60,13 +62,19 @@ class BatchGenerator:
 
 
             # Arrange x: channel first
+            # GABRIEL: what is this for?
             self.dataset_x = np.transpose(self.dataset_x, axes=(0, 3, 1, 2))
 
             # Normalize between -1 and 1
+            # GABRIEL: what is this for?
             self.dataset_x = (self.dataset_x - 127.5) / 127.5
 
             # Y 1D format
             self.dataset_y = self.dataset_y[:, 0]
+        elif dataset == "covid-19":
+            # 1. Load data
+            # 2. Separate data between test and train
+            # 3. Normalize data
 
         assert (self.dataset_x.shape[0] == self.dataset_y.shape[0])
 
@@ -79,12 +87,13 @@ class BatchGenerator:
         print("GABRIEL: per_class_count: ", per_class_count)
 
         # Prune if needed!
+        # GABRIEL: we don't need this for 'xray' dataset
         if class_to_prune is not None:
             print("GABRIEL: Prune if needed!")
             all_ids = list(np.arange(len(self.dataset_x)))
 
             mask = [class_to_prune == lc for lc in self.dataset_y]
-            print("GABRIEL mask.shape: ", mask.shape)
+            print("GABRIEL mask: ", len(mask))
             all_ids_c = np.array(all_ids)[mask]
             print("GABRIEL all_ids_c.shape: ", all_ids_c.shape)
             np.random.shuffle(all_ids_c)
@@ -92,6 +101,9 @@ class BatchGenerator:
             other_class_count = np.array(per_class_count)
             other_class_count = np.delete(other_class_count, class_to_prune)
             # GABRIEL: np.delete eliminates the indices to remove in class_to_prune
+            print("GABRIEL: other_class_count: ", other_class_count)
+            print("GABRIEL: max other_class_count: ", max(other_class_count))
+            
             to_keep = int(np.ceil(unbalance * max(
                 other_class_count)))
 
@@ -101,10 +113,12 @@ class BatchGenerator:
             self.dataset_y = np.delete(self.dataset_y, to_delete, axis=0)
 
         # Recount after pruning
+        print("GABRIEL: Recount after pruning")
         per_class_count = list()
         for c in classes:
             per_class_count.append(np.sum(np.array(self.dataset_y == c)))
         self.per_class_count = per_class_count
+        print("GABRIEL: per_class_count: ", per_class_count)
 
         # List of labels
         self.label_table = [str(c) for c in range(10)]
@@ -143,6 +157,7 @@ class BatchGenerator:
         return [self.dataset_x.shape[1], self.dataset_x.shape[2], self.dataset_x.shape[3]]
 
     def next_batch(self):
+        # print("GABRIEL: next_batch()")
         dataset_x = self.dataset_x
         labels = self.labels
 
@@ -155,8 +170,6 @@ class BatchGenerator:
             access_pattern = sorted(access_pattern)
 
             yield dataset_x[access_pattern, :, :, :], labels[access_pattern]
-
-
 
 
 
