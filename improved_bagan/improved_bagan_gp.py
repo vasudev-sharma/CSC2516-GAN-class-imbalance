@@ -39,6 +39,7 @@ def change_image_shape(images):
     return images
 
 ######################## MNIST / CIFAR ##########################
+"""
 # # Load MNIST Fashion
 from tensorflow.keras.datasets.fashion_mnist import load_data
 # # Load CIFAR-10
@@ -51,35 +52,40 @@ labels = labels[0:10001]
 
 print("images.shape:",images.shape)
 print("labels.shape:",labels.shape)
+
+images = change_image_shape(images) # GABRIEL: this outputs (10001, 28, 28, 1)
 #print("shape -1: ",images.shape[-1])
 
-images = change_image_shape(images) # GABRIEL: Outputs (10001, 28, 28, 1)
-#print("shape -1: ",images.shape[-1])
-
-labels = labels.reshape(-1) # GABRIEL: Flatten
-# # # Convert from ints to floats
-# # images = images.astype('float32')
+labels = labels.reshape(-1) # GABRIEL: this is to "flatten"
+# Convert from ints to floats
+# images = images.astype('float32')
 
 # Create imbalanced version
 for c in range(1, 10):
     images = np.vstack([images[labels!=c], images[labels==c][:100*c]])
     labels = np.append(labels[labels!=c], np.ones(100*c) * c)
-
+"""
 ######################## Our Dataset ##########################
-# # Use our datasets
-print("xray dataset")
+# Use other datasets
+# GABRIEL: I'm doing my own preprocessing on the notebook's section: 
+# Final Preprocessing
+print("Xray dataset ====")
 images = np.load('x_train.npy')
 labels = np.load('y_train.npy')
+print("images.shape:",images.shape)
+print("labels.shape:",labels.shape)
+
+
 n_classes = len(np.unique(labels))
 print("Get number of classes:", n_classes)
-#images = change_image_shape(images)
-
+#images = change_image_shape(images) # GABRIEL: temporarily commented
 ######################## Preprocessing ##########################
 # Set channel
-channel = images.shape[-1]
+channel = images.shape[-1] # GABRIEL: this is by default, I have to check it
+print("set channel:", channel)
 
 """
-# GABRIEL: this is done via keras
+# GABRIEL: commented because this is done via keras
 # Set channel
 channel = images.shape[-1]
 print("channel:", channel)
@@ -94,7 +100,7 @@ print("real.shape=", real.shape)
 """
 
 # Train test split, for autoencoder (actually, this step is redundant if we already have test set)
-x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=0.2, shuffle=True, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=0.15, shuffle=True, random_state=42)
 print("x_train.shape:",x_train.shape)
 print("y_train.shape:",y_train.shape)
 print("x_test.shape:",x_test.shape)
@@ -108,10 +114,10 @@ x_test = (x_test.astype('float32') - 127.5) / 127.5
 img_size = x_train[0].shape
 # Get number of classes
 len(np.unique(y_train)) #GABRIEL
-print("Get number of classes:", n_classes)
+print("Again: check the number of classes:", n_classes)
 
 print("checking labels:")
-print(y_train[0])
+print(y_train)
 print(y_train[0].shape)
 
 # %% ---------------------------------- Hyperparameters ----------------------------------------------------------------
@@ -247,6 +253,7 @@ print("x_test.shape:",x_test.shape)
 print("y_test.shape:",y_test.shape)
 """
 
+
 # GABRIEL: here train/test data is used to fit the autoencoder
 ae.fit([x_train, y_train], x_train,
        epochs=30,
@@ -279,7 +286,12 @@ for i in range(n):
         plt.gray()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-plt.show()
+#plt.show()
+
+try:
+  os.mkdir("bagan_gp_results")
+except:
+  print("directory was previously created")
 plt.savefig('bagan_gp_results/autoencoder_results.png')
 
 ####################### Use the pre-trained Autoencoder #########################
@@ -567,23 +579,23 @@ def plt_img(generator, epoch):
                 plt.gray()
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
-    
-    #img_str = "bagan_gp_results/generated_plot_"+str(epoch)+".png"
-    #wandb.log({"example": wandb.Image(img_str)})
-
-    #plt.savefig('xray_bagan_gp_results/generated_plot_%d.png' % epoch)
+    plt.savefig('bagan_gp_results/generated_plot_%d.png' % epoch)
     plt.show()
     return
 
 # make directory to store results
-os.system('mkdir -p bagan_gp_results')
+#os.system('mkdir -p bagan_gp_results')
+try:
+  os.mkdir("bagan_gp_results")
+except:
+  print("directory was previously created")
 
 # Record the loss
 d_loss_history = []
 g_loss_history = []
 
 ############################# Start training #############################
-LEARNING_STEPS = 75
+LEARNING_STEPS = 50
 for learning_step in range(LEARNING_STEPS):
     print('LEARNING STEP # ', learning_step + 1, '-' * 50)
     bagan_gp.fit(x_train, y_train, batch_size=128, epochs=2)
@@ -613,17 +625,6 @@ for i in range(LEARNING_STEPS):
         print('loading png...', i)
         im = imageio.imread(dir + fname, 'png')
         ims.append(im)
-print('saving as gif...')
-imageio.mimsave(dir + 'training_demo.gif', ims, fps=3)
+#print('saving as gif...')
+#imageio.mimsave(dir + 'training_demo.gif', ims, fps=3)
 bagan_gp.generator.save('bagan_gp_results/my_generator.h5')
-#bagan_gp.discriminator.save('xray_bagan_gp_results/my_discriminator.h5')
-#bagan_gp.discriminator.save('xray_bagan_gp_results/my_discriminator.h5')
-# en = load_model('bagan_gp_encoder.h5')
-# em = load_model('bagan_gp_embedding.h5')
-# de = load_model('bagan_gp_decoder.h5')
-#bagan_gp = BAGAN_GP(
-#    discriminator=d_model,
-#    generator=g_model,
-#    latent_dim=latent_dim,
-#    discriminator_extra_steps=3,
-#)
