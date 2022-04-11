@@ -258,6 +258,8 @@ def combine_vectors(x, y):
     return torch.cat([x.float(), y.float()], dim=1)
 
 
+def interpolation_noise
+
 '''
 combined = combine_vectors(torch.tensor([[1, 2], [3, 4]]), torch.tensor([[5, 6], [7, 8]]));
 # Check exact order of elements
@@ -550,7 +552,13 @@ if __name__ == "__main__":
     ##############################
 
 
-    
+    n_interpolation = 9 # num of classes you want to generate
+
+    n_class_genrate = 5
+
+    interpolation_label = get_one_hot_labels(torch.Tensor([n_class_generate]).long(), n_classes).repeat(n_interpolation, 1).float()
+
+
 
 
 

@@ -8,7 +8,8 @@ from main import get_paths
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-from scripts.utils import save_models
+from scripts.utils import save_models, update_parser, get_deterministic_run
+import os
 torch.manual_seed(0)
 import argparse
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -68,10 +69,6 @@ class Generator(nn.Module):
 
 def get_noise(n_samples, z_dim, device='cpu'):
     return torch.randn(n_samples, z_dim, device=device)
-
-
-
-
 
 
 class Discriminator(nn.Module):
@@ -197,18 +194,45 @@ def weights_init(m):
 
 
 if __name__ == "__main__":
+    
+    get_deterministic_run()
+
     parser = argparse.ArgumentParser()
+
 
     parser.add_argument('--with_gan', type=bool, default=True, required=False)
     parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
-    parser.add_argument('--GAN_type', help = 'DCGAN, DCGAN_GP, SNGAN, DCGAN_GP_cond', type=str, required=False)
+    parser.add_argument('--GAN_type', help = 'DCGAN, DCGAN_GP, LSGAN, SNGAN, DCGAN_GP_conditional', type=str, required=False)
     parser.add_argument('--user', type=str, required=True)
+    parser.add_argument('--im_channel', type=int, required=False, default=1)
+    parser = update_parser(parser)
 
     args = parser.parse_args()
 
+
+    # Hyperparameters and loss
+    criterion = nn.BCEWithLogitsLoss()
+    num_epochs = args.epochs
+    z_dim = args.z_dim
+    lr = args.lr
+    device = device
+
+    '''# Chest X ray params
+    display_step = 100
+    batch_size = 32
+'''
+    # MNIST  params
+    display_step = args.display_step
+    batch_size = args.batch_size
+    # print("Hello World")
+
+    im_channel = args.im_channel
+
+    '''
     ## Test Discriminator
     gen = Generator()
     num_test = 100
+
 
     # Test the hidden block
     test_hidden_noise = get_noise(num_test, gen.z_dim)
@@ -228,7 +252,7 @@ if __name__ == "__main__":
     test_gen_noise = get_noise(num_test, gen.z_dim)
     test_uns_gen_noise = gen.unsqueeze_noise(test_gen_noise)
     gen_output = gen(test_uns_gen_noise)
-
+    
     # UNIT TESTS
     assert tuple(hidden_output.shape) == (num_test, 20, 4, 4)
     assert hidden_output.max() > 1
@@ -247,40 +271,27 @@ if __name__ == "__main__":
     assert gen_output.std() < 0.8
     print("Success!")
 
+
     # Test your make_disc_block() function
 
     num_test = 100
 
     gen = Generator()
     disc = Discriminator()
+    '''
 
-    # Hyperparameters and loss
-    criterion = nn.BCEWithLogitsLoss()
-    num_epochs = 200
-    z_dim = 64
-    display_step = 500
-    lr = 2e-4
-    device = 'cuda'
-    batch_size = 128
+
+ 
 
 
     beta1 = 0.5
     beta2 = 0.999
 
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.5,), (0.5,)),
-    ])
 
+    # wandb.login()
     wandb.init(entity='vs74', project='GAN')
-    config = { 'num_epochs' : num_epochs,
-    'z_dim' : z_dim,
-    'display_step' : display_step,
-    'lr' : lr,
-    'device' : device,
-    'batch_size' : batch_size,
-        }
-    wandb.config.update(config)
+    wandb.config.update(args)
+
 
     num_classes = {"MNIST": 10,
                     "COVID": 25,
@@ -292,16 +303,18 @@ if __name__ == "__main__":
         transform = transforms.Compose([
             # transforms.Resize(299),
             # transforms.CenterCrop(299),
-            transforms.Grayscale(num_output_channels=1), # for FID
+            transforms.Grayscale(num_output_channels=im_channel), # for FID
             transforms.ToTensor(),
-            transforms.Normalize((0.5), (0.5)),
+            transforms.Normalize(tuple([0.5] * im_channel), tuple([0.5] * im_channel)),
         ])
         dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
         # generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=10)
 
+        model_path = os.path.join(os.getcwd(), "models")
+
     elif args.dataset == "COVID" or args.dataset == "COVID-small" or args.dataset == "RSNA":
         data_path, output_path, model_path = get_paths(args, args.user)
-        ds, transform = load_data(data_path, dataset_size=None, with_gan=args.with_gan, data_aug=False, dataset=args.dataset)
+        ds, transform = load_data(data_path, dataset_size=None, with_gan=args.with_gan, data_aug=False, dataset=args.dataset, im_channel=args.im_channel)
         dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True)
 
         # TODO: Play with different size of the generated image
@@ -310,9 +323,10 @@ if __name__ == "__main__":
     else:
         raise Exception("Invalid Dataset Entered")
 
-    gen = Generator(z_dim).to(device)
+
+    gen = Generator(z_dim, im_channel=im_channel).to(device)
     gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
-    disc = Discriminator().to(device)
+    disc = Discriminator(im_channel=im_channel).to(device)
     disc_opt = torch.optim.Adam(disc.parameters(), lr=lr, betas=(beta1, beta2))
 
 
@@ -374,8 +388,8 @@ if __name__ == "__main__":
                 print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
                 # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
                 # fake_images = gen(noise_vectors)
-                show_tensor_images(fake_images, type="fake")
-                show_tensor_images(real, type="real")
+                show_tensor_images(fake_images, type="fake", size=(im_channel, 28, 28))
+                show_tensor_images(real, type="real", size=(im_channel, 28, 28))
                 mean_generator_loss = 0
                 mean_discriminator_loss = 0
 
@@ -384,10 +398,9 @@ if __name__ == "__main__":
     print("Training is Completed ")    
 
 
-
     #################################
     # Save Models and log onto wandb
     #################################
-
-    save_models(gen=gen, disc=disc)
-
+    model_path = os.path.join(model_path, args.dataset, os.path.basename(__file__)[:-3])
+    print(model_path)
+    save_models(gen=gen, disc=disc, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
