@@ -30,7 +30,7 @@
 # python scripts/GANs/DCGAN.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-3 --display_step 50 --z_dim 64 --GAN_type DCGAN --batch_size 32  --im_channel 3
 
 # DCGAN_GP
-# python scripts/GANs/DCGAN_GP.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-4 --display_step 100 --z_dim 64 --GAN_type DCGAN --batch_size 32  --im_channel 3
+python scripts/GANs/DCGAN_GP.py --dataset COVID-small --user vasu --with_gan True --epochs 100 --lr 2e-3 --display_step 100 --z_dim 100 --GAN_type DCGAN_GP --batch_size 32  --im_channel 3 
 
 # DCGAN_GP_conditional
 # python scripts/GANs/DCGAN_GP_conditional.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-4 --display_step 100 --z_dim 64 --GAN_type DCGAN --batch_size 32  --im_channel 3
@@ -39,7 +39,7 @@
 # python scripts/GANs/SNGAN.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-4 --display_step 100 --z_dim 64 --GAN_type SNGAN --batch_size 32  --im_channel 3
 
 # LSGAN
-python scripts/GANs/LSGAN.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-4 --display_step 100 --z_dim 64 --GAN_type LSGAN --batch_size 32 --im_channel 3
+# python scripts/GANs/LSGAN.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-4 --display_step 100 --z_dim 64 --GAN_type LSGAN --batch_size 32 --im_channel 3
 
 
 

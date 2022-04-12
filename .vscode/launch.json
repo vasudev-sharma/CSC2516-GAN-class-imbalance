@@ -13,7 +13,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--user", "vasu", "--dataset", "COVID-small", "--with_gan", "True"]
+            "args": ["--dataset", "COVID-small", "--user", "vasu", "--with_gan", "True", "--epochs", "1", "--lr", "2e-4", "--display_step", "100", "--z_dim", "100", "--GAN_type", "DCGAN_GP", "--batch_size", "2",  "--im_channel", "3"]
         }
     ]
 }

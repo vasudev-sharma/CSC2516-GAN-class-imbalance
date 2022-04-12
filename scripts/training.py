@@ -93,7 +93,7 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
     if with_gan:
         transform = torchvision.transforms.Compose([transforms.Grayscale(num_output_channels=im_channel),
                                                 # xrv.datasets.XRayCenterCrop(),
-                                                xrv.datasets.XRayResizer(28)])
+                                                xrv.datasets.XRayResizer(64)])
         if dataset == "COVID":
             ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
                                         csvpath=train_filename, transform=transform)
@@ -106,7 +106,7 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
             transform = transforms.Compose([
                                     # transforms.Resize(299),
                                     # transforms.CenterCrop(299),
-                                    transforms.Resize((28, 28)),
+                                    transforms.Resize((64, 64)),
                                     transforms.Grayscale(num_output_channels=im_channel), # for FID
                                     transforms.ToTensor(),
                                     transforms.Normalize(tuple([0.5] * im_channel), tuple([0.5] * im_channel)),

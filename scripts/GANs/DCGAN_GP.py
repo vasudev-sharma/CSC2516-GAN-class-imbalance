@@ -39,30 +39,46 @@ class Generator(nn.Module):
     def __init__(self, z_dim=10, im_channel=1, hidden_dim=64):
         super(Generator, self).__init__()
         self.z_dim = z_dim
-        self.gen = nn.Sequential(
 
-            self.make_gen_block(self.z_dim, hidden_dim * 4),
-            self.make_gen_block(hidden_dim * 4, hidden_dim * 2, kernel_size=4, stride=1),
-            self.make_gen_block(hidden_dim * 2, hidden_dim),
-            self.make_gen_block(hidden_dim, im_channel, kernel_size=4, final_layer=True)
-        )
+        if args.dataset == "MNIST":
+            self.gen = nn.Sequential(
+
+                self.make_gen_block(self.z_dim, hidden_dim * 4),
+                self.make_gen_block(hidden_dim * 4, hidden_dim * 2, kernel_size=4, stride=1),
+                self.make_gen_block(hidden_dim * 2, hidden_dim),
+                self.make_gen_block(hidden_dim, im_channel, kernel_size=4, final_layer=True)
+            )
+
+        else:
+
+             self.gen = nn.Sequential(
+
+                self.make_gen_block(self.z_dim, hidden_dim * 8, 4, 1, 0),
+                self.make_gen_block(hidden_dim * 8, hidden_dim * 4, 4, 2, 1),
+                self.make_gen_block(hidden_dim * 4, hidden_dim * 2, 4, 2, 1),
+                self.make_gen_block(hidden_dim * 2, hidden_dim, 4, 2, 1),
+                self.make_gen_block(hidden_dim, im_channel, 4, 2, 1, final_layer=True)
+            )
+
     
-    def make_gen_block(self, input_channels, output_channels, kernel_size=3,  stride=2, final_layer=False):
+    def make_gen_block(self, input_channels, output_channels, kernel_size=3,  stride=2, padding=0, final_layer=False):
 
         if not final_layer:
             return nn.Sequential(
-                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
+                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding),
                 nn.BatchNorm2d(output_channels),
                 nn.ReLU(inplace=True)
             )
         else:
             return nn.Sequential(
-                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
+                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding),
                 nn.Tanh() # Tanh Activation is used here
             )
 
     def forward(self, noise_vectors):
         z = self.unsqueeze_noise(noise_vectors)
+        # for layer in self.gen(z):
+        #     print(layer.shape)
         return self.gen(z)
 
     def unsqueeze_noise(self, noise_vectors):
@@ -71,31 +87,37 @@ class Generator(nn.Module):
 def get_noise(n_samples, z_dim, device='cpu'):
     return torch.randn(n_samples, z_dim, device=device)
 
-
-
-
 class Critic(nn.Module):
 
     def __init__(self, im_channel=1, hidden_dim=16):
         super(Critic, self).__init__()
 
-        self.disc = nn.Sequential(
-            self.make_disc_block(im_channel, hidden_dim),
-            self.make_disc_block(hidden_dim, hidden_dim*2),
-            self.make_disc_block(hidden_dim * 2, 1, final_layer=True)
-        )
+        if args.dataset == "MNIST":
+
+            self.disc = nn.Sequential(
+                self.make_disc_block(im_channel, hidden_dim),
+                self.make_disc_block(hidden_dim, hidden_dim*2),
+                self.make_disc_block(hidden_dim * 2, 1, final_layer=True)
+            )
+        else:
+            self.disc = nn.Sequential(
+                self.make_disc_block(im_channel, hidden_dim, 4, 2, 1),
+                self.make_disc_block(hidden_dim, hidden_dim*2, 4, 2, 1),
+                self.make_disc_block(hidden_dim*2, hidden_dim*4, 4, 2, 1),
+                self.make_disc_block(hidden_dim*4, hidden_dim*8, 4, 2, 1),
+                self.make_disc_block(hidden_dim*8, 1, 4, 1, 0, final_layer=True)
+            )
     
-    def make_disc_block(self, input_channels, output_channels, kernel_size=4, stride=2, final_layer=False):
+    def make_disc_block(self, input_channels, output_channels, kernel_size=4, stride=2, padding=0, final_layer=False):
 
         if not final_layer:
             return nn.Sequential(
-                nn.Conv2d(input_channels, output_channels, kernel_size, stride),
+                nn.Conv2d(input_channels, output_channels, kernel_size, stride, padding),
                 nn.BatchNorm2d(output_channels),
                 nn.LeakyReLU(0.2, inplace=True)
             )
         else:
-
-            return nn.Conv2d(input_channels, output_channels, kernel_size, stride)
+            return nn.Conv2d(input_channels, output_channels, kernel_size, stride, padding)
     
     def forward(self, inputs):
         disc_pred = self.disc(inputs)
@@ -160,6 +182,9 @@ def get_gradient(critic, real, fake, epsilon):
     """
 
     # Mix images together
+    # print(real.shape)
+    # print(fake.shape)
+    # print(epsilon.shape)
     mixed_images = real * epsilon + fake * (1 - epsilon)
 
     # Critic scores on the mixed images
@@ -418,8 +443,8 @@ if __name__ == "__main__":
                 print(f'Step: {curr_step} | Generator Loss:{sum(generator_losses[-display_step:]) / display_step} | Discriminator Loss: {sum(critic_losses[-display_step:]) / display_step}')
                 # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
                 # fake_images = gen(noise_vectors)
-                show_tensor_images(fake_images, type="fake", size=(im_channel, 28, 28))
-                show_tensor_images(real, type="real", size=(im_channel, 28, 28))
+                show_tensor_images(fake_images, type="fake", size=(im_channel, 64, 64))
+                show_tensor_images(real, type="real", size=(im_channel, 64, 64))
 
                 # mean_generator_loss = 0.0
                 # mean_discriminator_loss = 0.0

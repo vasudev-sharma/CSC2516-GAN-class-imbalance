@@ -38,4 +38,4 @@ pip install wandb
 # srun --partition biggpunodes --nodelist gpunode23 -c 2 --gres=gpu:1 --mem=31000M bash_scripts/run_train.sh
 
 # export PYTHON to path
-export PYTHONPATH="${PYTHONPATH}:/root/CSC2516-GAN-class-imbalance"
+export PYTHONPATH="${PYTHONPATH}:/w/247/vasu/CSC2516-GAN-class-imbalance"
