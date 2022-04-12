@@ -106,7 +106,7 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
             transform = transforms.Compose([
                                     # transforms.Resize(299),
                                     # transforms.CenterCrop(299),
-                                    transforms.Resize((64, 64)),
+                                    transforms.Resize((128, 128)),
                                     transforms.Grayscale(num_output_channels=im_channel), # for FID
                                     transforms.ToTensor(),
                                     transforms.Normalize(tuple([0.5] * im_channel), tuple([0.5] * im_channel)),

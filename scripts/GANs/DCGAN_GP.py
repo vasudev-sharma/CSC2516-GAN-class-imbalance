@@ -9,7 +9,7 @@ from main import get_paths
 from scripts.training import load_data
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
-from scripts.utils import save_models, update_parser, get_deterministic_run
+from scripts.utils import save_models, update_parser, get_deterministic_run, InceptionV3, calculate_fretchet, EarlyStopping
 import matplotlib.pyplot as plt
 import os
 torch.manual_seed(0)
@@ -53,7 +53,8 @@ class Generator(nn.Module):
 
              self.gen = nn.Sequential(
 
-                self.make_gen_block(self.z_dim, hidden_dim * 8, 4, 1, 0),
+                self.make_gen_block(self.z_dim, hidden_dim * 16, 4, 1, 0),
+                self.make_gen_block(hidden_dim * 16, hidden_dim * 8, 4, 2, 1),
                 self.make_gen_block(hidden_dim * 8, hidden_dim * 4, 4, 2, 1),
                 self.make_gen_block(hidden_dim * 4, hidden_dim * 2, 4, 2, 1),
                 self.make_gen_block(hidden_dim * 2, hidden_dim, 4, 2, 1),
@@ -105,7 +106,8 @@ class Critic(nn.Module):
                 self.make_disc_block(hidden_dim, hidden_dim*2, 4, 2, 1),
                 self.make_disc_block(hidden_dim*2, hidden_dim*4, 4, 2, 1),
                 self.make_disc_block(hidden_dim*4, hidden_dim*8, 4, 2, 1),
-                self.make_disc_block(hidden_dim*8, 1, 4, 1, 0, final_layer=True)
+                self.make_disc_block(hidden_dim*8, hidden_dim*16, 4, 2, 1),
+                self.make_disc_block(hidden_dim*16, 1, 4, 1, 0, final_layer=True)
             )
     
     def make_disc_block(self, input_channels, output_channels, kernel_size=4, stride=2, padding=0, final_layer=False):
@@ -312,7 +314,7 @@ if __name__ == "__main__":
 
     im_channel = args.im_channel
 
-    beta1 = 0.5
+    beta1 = 0.6
     beta2 = 0.999
 
     # wandb.login()
@@ -384,6 +386,14 @@ if __name__ == "__main__":
     generator_losses = []
 
 
+
+    block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[2048]
+    model = InceptionV3([block_idx])
+    model=model.cuda()
+
+    # Use early stopping for FID
+    early_stopping = EarlyStopping(patience=50, verbose=True)
+
     for epoch in tqdm(range(num_epochs)):
         
         for real, _ in tqdm(dataloader):
@@ -443,13 +453,24 @@ if __name__ == "__main__":
                 print(f'Step: {curr_step} | Generator Loss:{sum(generator_losses[-display_step:]) / display_step} | Discriminator Loss: {sum(critic_losses[-display_step:]) / display_step}')
                 # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
                 # fake_images = gen(noise_vectors)
-                show_tensor_images(fake_images, type="fake", size=(im_channel, 64, 64))
-                show_tensor_images(real, type="real", size=(im_channel, 64, 64))
+                show_tensor_images(fake_images, type="fake", size=(im_channel, 128, 128))
+                show_tensor_images(real, type="real", size=(im_channel, 128, 128))
 
                 # mean_generator_loss = 0.0
                 # mean_discriminator_loss = 0.0
 
             curr_step += 1
+
+        fretchet_dist=calculate_fretchet(real, fake_images, model) 
+        wandb.log({'FID': fretchet_dist})
+
+        early_stopping(fretchet_dist, model)
+
+        if early_stopping.early_stop:
+            print()
+            print("="*32 + "Early Stopping" + "="*32)
+            break
+
 
     print("Training is Completed ")    
 
