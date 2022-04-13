@@ -224,7 +224,7 @@ def calculate_fretchet(images_real,images_fake,model):
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', trace_func=print):
+    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt', trace_func=print, save_models=None, gen=None, disc=None,gen_pretrained_path=None,disc_pretrained_path=None):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -247,6 +247,11 @@ class EarlyStopping:
         self.delta = delta
         self.path = path
         self.trace_func = trace_func
+        self.save_models = save_models
+        self.gen  = gen
+        self.disc  = disc
+        self.gen_pretrained_path  = gen_pretrained_path
+        self.disc_pretrained_path  = disc_pretrained_path
     def __call__(self, val_loss, model):
 
         score = -val_loss
@@ -262,6 +267,7 @@ class EarlyStopping:
         else:
             self.best_score = score
             self.save_checkpoint(val_loss, model)
+            self.save_models(self.gen, self.disc, self.gen_pretrained_path, self.disc_pretrained_path)
             self.counter = 0
 
     def save_checkpoint(self, val_loss, model):
@@ -302,6 +308,15 @@ def frechet_distance(mu_x, mu_y, sigma_x, sigma_y):
 
     fid = (mu_x - mu_y).dot(mu_x-mu_y) + torch.trace(sigma_x) + torch.trace(sigma_y) - 2*torch.trace(matrix_sqrt(sigma_x @ sigma_y))
     return fid
+
+
+
+def get_input_dimensions(z_dim, input_shape, num_classes):
+    generator_input_dim = z_dim + num_classes
+    critic_input_dim = input_shape[0] + num_classes
+
+    return generator_input_dim, critic_input_dim
+
 
 # UNIT TEST
 '''
@@ -366,13 +381,22 @@ def load_generator_and_discriminator(gen=None, disc=None, gen_pretrained_path=''
         disc_pretrained_path = os.path.join(os.getcwd(), 'disc.pth')
     if gen is not None and disc is None:
         gen.load_state_dict(torch.load(gen_pretrained_path))
+        print()
+        print('Generator has been loaded')
+        print()
         return gen
     elif disc is not None and gen is None:
         disc.load_state_dict(torch.load(disc_pretrained_path))
+        print()
+        print('Discriminator has been loaded')
+        print()
         return disc
     elif not disc and not gen:
         disc.load_state_dict(torch.load(disc_pretrained_path))
         gen.load_state_dict(torch.load(gen_pretrained_path))
+        print()
+        print('Generator and Discriminator have been loaded')
+        print()
         return disc, gen
     else:
         raise Exception("Generator and/or Discriminator are invalid")
@@ -385,7 +409,7 @@ def update_parser(parser):
     parser.add_argument('--epochs', help="Total Number of Epochs", type=int, required=False, default=30)
     parser.add_argument('--z_dim', help="Noise vector dimension", type=int, required=False, default=64)
     parser.add_argument('--display_step', help="Display steps for logging", type=int, required=False, default=200)
-
+    parser.add_argument('--patience', help="Early stopping epochs", type=int, required=False, default=30)
     return parser
 
 def save_models(gen=None, disc=None, gen_pretrained_path='', disc_pretrained_path=''):

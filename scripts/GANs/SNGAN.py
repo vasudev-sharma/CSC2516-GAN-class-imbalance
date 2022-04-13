@@ -8,7 +8,7 @@ from main import get_paths
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-from scripts.utils import save_models, update_parser, get_deterministic_run
+from scripts.utils import InceptionV3, calculate_fretchet, EarlyStopping, save_models, get_deterministic_run, update_parser
 import os
 torch.manual_seed(0)
 import argparse
@@ -38,30 +38,47 @@ class Generator(nn.Module):
     def __init__(self, z_dim=10, im_channel=1, hidden_dim=64):
         super(Generator, self).__init__()
         self.z_dim = z_dim
-        self.gen = nn.Sequential(
 
-            self.make_gen_block(self.z_dim, hidden_dim * 4),
-            self.make_gen_block(hidden_dim * 4, hidden_dim * 2, kernel_size=4, stride=1),
-            self.make_gen_block(hidden_dim * 2, hidden_dim),
-            self.make_gen_block(hidden_dim, im_channel, kernel_size=4, final_layer=True)
-        )
+        if args.dataset == "MNIST":
+            self.gen = nn.Sequential(
+
+                self.make_gen_block(self.z_dim, hidden_dim * 4),
+                self.make_gen_block(hidden_dim * 4, hidden_dim * 2, kernel_size=4, stride=1),
+                self.make_gen_block(hidden_dim * 2, hidden_dim),
+                self.make_gen_block(hidden_dim, im_channel, kernel_size=4, final_layer=True)
+            )
+
+        else:
+
+             self.gen = nn.Sequential(
+
+                self.make_gen_block(self.z_dim, hidden_dim * 8, 4, 1, 0),
+                # self.make_gen_block(hidden_dim * 16, hidden_dim * 8, 4, 2, 1),
+                self.make_gen_block(hidden_dim * 8, hidden_dim * 4, 4, 2, 1),
+                self.make_gen_block(hidden_dim * 4, hidden_dim * 2, 4, 2, 1),
+                self.make_gen_block(hidden_dim * 2, hidden_dim, 4, 2, 1),
+                self.make_gen_block(hidden_dim, im_channel, 4, 2, 1, final_layer=True)
+            )
+
     
-    def make_gen_block(self, input_channels, output_channels, kernel_size=3,  stride=2, final_layer=False):
+    def make_gen_block(self, input_channels, output_channels, kernel_size=3,  stride=2, padding=0, final_layer=False):
 
         if not final_layer:
             return nn.Sequential(
-                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
+                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding),
                 nn.BatchNorm2d(output_channels),
                 nn.ReLU(inplace=True)
             )
         else:
             return nn.Sequential(
-                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
+                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding),
                 nn.Tanh() # Tanh Activation is used here
             )
 
     def forward(self, noise_vectors):
         z = self.unsqueeze_noise(noise_vectors)
+        # for layer in self.gen(z):
+        #     print(layer.shape)
         return self.gen(z)
 
     def unsqueeze_noise(self, noise_vectors):
@@ -70,28 +87,38 @@ class Generator(nn.Module):
 def get_noise(n_samples, z_dim, device='cpu'):
     return torch.randn(n_samples, z_dim, device=device)
 
-
 class Discriminator(nn.Module):
 
-    def __init__(self, im_channel=1, hidden_dim=16):
+    def __init__(self, im_channel=1, hidden_dim=64):
         super(Discriminator, self).__init__()
 
-        self.disc = nn.Sequential(
-            self.make_disc_block(im_channel, hidden_dim),
-            self.make_disc_block(hidden_dim, hidden_dim*2),
-            self.make_disc_block(hidden_dim * 2, 1, final_layer=True)
-        )
+        if args.dataset == "MNIST":
+
+            self.disc = nn.Sequential(
+                self.make_disc_block(im_channel, hidden_dim),
+                self.make_disc_block(hidden_dim, hidden_dim*2),
+                self.make_disc_block(hidden_dim * 2, 1, final_layer=True)
+            )
+        else:
+            self.disc = nn.Sequential(
+                self.make_disc_block(im_channel, hidden_dim, 4, 2, 1),
+                self.make_disc_block(hidden_dim, hidden_dim*2, 4, 2, 1),
+                self.make_disc_block(hidden_dim*2, hidden_dim*4, 4, 2, 1),
+                self.make_disc_block(hidden_dim*4, hidden_dim*8, 4, 2, 1),
+                self.make_disc_block(hidden_dim*8, 1, 4, 1, 0, final_layer=True),
+                # self.make_disc_block(hidden_dim*16, 1, 4, 1, 0, final_layer=True)
+            )
     
-    def make_disc_block(self, input_channels, output_channels, kernel_size=4, stride=2, final_layer=False):
+    def make_disc_block(self, input_channels, output_channels, kernel_size=4, stride=2, padding=0, final_layer=False):
 
         if not final_layer:
             return nn.Sequential(
-                nn.utils.spectral_norm(nn.Conv2d(input_channels, output_channels, kernel_size, stride)),
+                nn.Conv2d(input_channels, output_channels, kernel_size, stride, padding),
                 nn.BatchNorm2d(output_channels),
                 nn.LeakyReLU(0.2, inplace=True)
             )
         else:
-            return nn.utils.spectral_norm(nn.Conv2d(input_channels, output_channels, kernel_size, stride))
+            return nn.Conv2d(input_channels, output_channels, kernel_size, stride, padding)
     
     def forward(self, inputs):
         disc_pred = self.disc(inputs)
@@ -205,6 +232,8 @@ if __name__ == "__main__":
     parser.add_argument('--GAN_type', help = 'DCGAN, DCGAN_GP, LSGAN, SNGAN, DCGAN_GP_conditional', type=str, required=False)
     parser.add_argument('--user', type=str, required=True)
     parser.add_argument('--im_channel', type=int, required=False, default=1)
+    parser.add_argument('--n_class_generate', type=int, required=False, default=1)
+    parser.add_argument('--num_images_per_class', type=int, required=False, default=20)
     parser = update_parser(parser)
 
     args = parser.parse_args()
@@ -334,6 +363,25 @@ if __name__ == "__main__":
     gen = gen.apply(weights_init)
     disc = disc.apply(weights_init)
 
+
+
+    block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[2048]
+    model = InceptionV3([block_idx])
+    model=model.cuda()
+
+
+    # Use early stopping for FID
+    early_stopping = EarlyStopping(patience=args.patience, verbose=True, save_models=save_models, gen=gen, disc=disc, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
+
+    #################################
+    # Save Models and log onto wandb
+    #################################
+
+    model_path = os.path.join(model_path, args.dataset, os.path.basename(__file__)[:-3])
+    print(model_path)
+    # save_models(gen=gen, disc=critic, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
+
+
     # num_epochs = 50
     mean_discriminator_loss = 0.0 
     mean_generator_loss = 0.0 
@@ -388,19 +436,33 @@ if __name__ == "__main__":
                 print(f'Step: {curr_step} | Generator Loss:{mean_generator_loss} | Discriminator Loss: {mean_discriminator_loss}')
                 # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
                 # fake_images = gen(noise_vectors)
-                show_tensor_images(fake_images, type="fake", size=(im_channel, 28, 28))
-                show_tensor_images(real, type="real", size=(im_channel, 28, 28))
+                if args.dataset == "MNIST":
+                    show_tensor_images(fake_images, type="fake", size=(im_channel, 28, 28))
+                    show_tensor_images(real, type="real", size=(im_channel, 28, 28))
+                else:
+                    show_tensor_images(fake_images, type="fake", size=(im_channel, 64, 64))
+                    show_tensor_images(real, type="real", size=(im_channel, 64, 64))
                 mean_generator_loss = 0
                 mean_discriminator_loss = 0
 
             curr_step += 1
+        fretchet_dist=calculate_fretchet(real, fake_images, model) 
+        wandb.log({'FID': fretchet_dist})
+
+        early_stopping(fretchet_dist, model)
+
+        if early_stopping.early_stop:
+            print()
+            print("="*32 + "Early Stopping" + "="*32)
+            break
 
     print("Training is Completed ")    
 
 
-    #################################
-    # Save Models and log onto wandb
-    #################################
-    model_path = os.path.join(model_path, args.dataset, os.path.basename(__file__)[:-3])
-    print(model_path)
-    save_models(gen=gen, disc=disc, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
+    if not os.path.exists(os.path.join(model_path, 'gen.pth')):
+        # Save the model
+        print()
+        print("*******************Best FID checkpointing didn't work**********")
+        print()
+        save_models(gen=gen, disc=disc, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
+

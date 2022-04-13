@@ -1,4 +1,5 @@
 import wandb 
+import os
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -7,9 +8,10 @@ from torchvision import transforms, datasets
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-from scripts.utils import get_inception_model, preprocess, get_covariance, frechet_distance, save_models
+from scripts.utils import InceptionV3, calculate_fretchet, EarlyStopping, save_models, get_deterministic_run, update_parser, load_generator_and_discriminator
 from scripts.training import load_data
 from main import get_paths
+import math
 
 import argparse
 
@@ -32,41 +34,56 @@ def show_tensor_images(image_tensor, num_images=25, size=(1, 28, 28), type='fake
     elif type == 'real':
         images = wandb.Image(img_grid.permute(1, 2, 0).squeeze().numpy(), caption="Real Images")
         wandb.log({"Real Image": images})
-    else:
-        raise Exception("Invalid Type entered: Real / Fake")
+    # else:
+        # raise Exception("Invalid Type entered: Real / Fake")
     plt.show()
-
 
 
 class Generator(nn.Module):
     def __init__(self, input_dim=10, im_channel=1, hidden_dim=64):
         super(Generator, self).__init__()
-        # self.input_dim = z_dim
         self.input_dim = input_dim
-        self.gen = nn.Sequential(
 
-            self.make_gen_block(self.input_dim, hidden_dim * 4),
-            self.make_gen_block(hidden_dim * 4, hidden_dim * 2, kernel_size=4, stride=1),
-            self.make_gen_block(hidden_dim * 2, hidden_dim),
-            self.make_gen_block(hidden_dim, im_channel, kernel_size=4, final_layer=True)
-        )
+        if args.dataset == "MNIST":
+            self.gen = nn.Sequential(
+
+                self.make_gen_block(self.input_dim, hidden_dim * 4),
+                self.make_gen_block(hidden_dim * 4, hidden_dim * 2, kernel_size=4, stride=1),
+                self.make_gen_block(hidden_dim * 2, hidden_dim),
+                self.make_gen_block(hidden_dim, im_channel, kernel_size=4, final_layer=True)
+            )
+
+        else:
+
+             self.gen = nn.Sequential(
+
+                self.make_gen_block(self.input_dim, hidden_dim * 8, 4, 1, 0),
+                # self.make_gen_block(hidden_dim * 16, hidden_dim * 8, 4, 2, 1),
+                self.make_gen_block(hidden_dim * 8, hidden_dim * 4, 4, 2, 1),
+                self.make_gen_block(hidden_dim * 4, hidden_dim * 2, 4, 2, 1),
+                self.make_gen_block(hidden_dim * 2, hidden_dim, 4, 2, 1),
+                self.make_gen_block(hidden_dim, im_channel, 4, 2, 1, final_layer=True)
+            )
+
     
-    def make_gen_block(self, input_channels, output_channels, kernel_size=3,  stride=2, final_layer=False):
+    def make_gen_block(self, input_channels, output_channels, kernel_size=3,  stride=2, padding=0, final_layer=False):
 
         if not final_layer:
             return nn.Sequential(
-                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
+                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding),
                 nn.BatchNorm2d(output_channels),
                 nn.ReLU(inplace=True)
             )
         else:
             return nn.Sequential(
-                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride),
+                nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding),
                 nn.Tanh() # Tanh Activation is used here
             )
 
     def forward(self, noise_vectors):
         z = self.unsqueeze_noise(noise_vectors)
+        # for layer in self.gen(z):
+        #     print(layer.shape)
         return self.gen(z)
 
     def unsqueeze_noise(self, noise_vectors):
@@ -75,82 +92,42 @@ class Generator(nn.Module):
 def get_noise(n_samples, z_dim, device='cpu'):
     return torch.randn(n_samples, z_dim, device=device)
 
-
-
-
-
 class Critic(nn.Module):
 
-    def __init__(self, im_channel=1, hidden_dim=16):
+    def __init__(self, im_channel=1, hidden_dim=64):
         super(Critic, self).__init__()
 
-        self.disc = nn.Sequential(
-            self.make_disc_block(im_channel, hidden_dim),
-            self.make_disc_block(hidden_dim, hidden_dim*2),
-            self.make_disc_block(hidden_dim * 2, 1, final_layer=True)
-        )
+        if args.dataset == "MNIST":
+
+            self.disc = nn.Sequential(
+                self.make_disc_block(im_channel, hidden_dim),
+                self.make_disc_block(hidden_dim, hidden_dim*2),
+                self.make_disc_block(hidden_dim * 2, 1, final_layer=True)
+            )
+        else:
+            self.disc = nn.Sequential(
+                self.make_disc_block(im_channel, hidden_dim, 4, 2, 1),
+                self.make_disc_block(hidden_dim, hidden_dim*2, 4, 2, 1),
+                self.make_disc_block(hidden_dim*2, hidden_dim*4, 4, 2, 1),
+                self.make_disc_block(hidden_dim*4, hidden_dim*8, 4, 2, 1),
+                self.make_disc_block(hidden_dim*8, 1, 4, 1, 0, final_layer=True),
+                # self.make_disc_block(hidden_dim*16, 1, 4, 1, 0, final_layer=True)
+            )
     
-    def make_disc_block(self, input_channels, output_channels, kernel_size=4, stride=2, final_layer=False):
+    def make_disc_block(self, input_channels, output_channels, kernel_size=4, stride=2, padding=0, final_layer=False):
 
         if not final_layer:
             return nn.Sequential(
-                nn.Conv2d(input_channels, output_channels, kernel_size, stride),
+                nn.Conv2d(input_channels, output_channels, kernel_size, stride, padding),
                 nn.BatchNorm2d(output_channels),
                 nn.LeakyReLU(0.2, inplace=True)
             )
         else:
-
-            return nn.Conv2d(input_channels, output_channels, kernel_size, stride)
+            return nn.Conv2d(input_channels, output_channels, kernel_size, stride, padding)
     
     def forward(self, inputs):
         disc_pred = self.disc(inputs)
         return disc_pred.view(len(disc_pred), -1)
-
-'''
-Test your make_disc_block() function
-'''
-
-'''gen = Generator()
-disc = Discriminator()
-test_images = gen(get_noise(num_test, gen.z_dim))
-
-# Test the hidden block
-test_hidden_block = disc.make_disc_block(1, 5, kernel_size=6, stride=3)
-hidden_output = test_hidden_block(test_images)
-
-# Test the final block
-test_final_block = disc.make_disc_block(1, 10, kernel_size=2, stride=5, final_layer=True)
-final_output = test_final_block(test_images)
-
-# Test the whole thing:
-disc_output = disc(test_images)
-
-
-# Test the hidden block
-assert tuple(hidden_output.shape) == (num_test, 5, 8, 8)
-# Because of the LeakyReLU slope
-assert -hidden_output.min() / hidden_output.max() > 0.15
-assert -hidden_output.min() / hidden_output.max() < 0.25
-assert hidden_output.std() > 0.5
-assert hidden_output.std() < 1
-
-# Test the final block
-
-assert tuple(final_output.shape) == (num_test, 10, 6, 6)
-assert final_output.max() > 1.0
-assert final_output.min() < -1.0
-assert final_output.std() > 0.3
-assert final_output.std() < 0.6
-
-# Test the whole thing:
-
-assert tuple(disc_output.shape) == (num_test, 1)
-assert disc_output.std() > 0.25
-assert disc_output.std() < 0.5
-print("Success!")
-'''
-
-
 
 
 def get_input_dimensions(z_dim, input_shape, num_classes):
@@ -258,7 +235,16 @@ def combine_vectors(x, y):
     return torch.cat([x.float(), y.float()], dim=1)
 
 
-def interpolation_noise
+def interpolation_noise(first_noise, second_noise, n_interpolation, interpolation_label, gen):
+    percent_first_noise = torch.linspace(0, 1, n_interpolation)[:, None].to(device)
+    interpolation_noise = first_noise * percent_first_noise + second_noise * (1 - percent_first_noise)
+
+    # Combine noise and labels
+    noise_and_labels = combine_vectors(interpolation_noise, interpolation_label.to(device))
+    fake = gen(noise_and_labels)
+    show_tensor_images(fake, num_images=n_interpolation, nrow=int(math.sqrt(n_interpolation)), show=False)
+
+
 
 '''
 combined = combine_vectors(torch.tensor([[1, 2], [3, 4]]), torch.tensor([[5, 6], [7, 8]]));
@@ -285,93 +271,67 @@ def weights_init(m):
 
 if __name__ == "__main__":
 
+    get_deterministic_run()
+
     parser = argparse.ArgumentParser()
+
 
     parser.add_argument('--with_gan', type=bool, default=True, required=False)
     parser.add_argument('--dataset', help = 'RSNA, COVID, COVID-small, MNIST', type=str, default="MNIST", required=False)
+    parser.add_argument('--GAN_type', help = 'DCGAN, DCGAN_GP, LSGAN, SNGAN, DCGAN_GP_conditional', type=str, required=False)
     parser.add_argument('--user', type=str, required=True)
+    parser.add_argument('--im_channel', type=int, required=False, default=1)
+    parser.add_argument('--n_class_generate', type=int, required=False, default=1)
+    parser.add_argument('--num_images_per_class', type=int, required=False, default=20)
+    parser.add_argument('--critic_repeats', type=int, required=False, default=5)
+    parser.add_argument('--c_lambda', type=int, required=False, default=10)
+    parser = update_parser(parser)
 
     args = parser.parse_args()
 
+    # num_test = 100
 
-    num_test = 100
+    
 
-    ## Test Discriminator
-    gen = Generator()
-    num_test = 100
-
-    # Test the hidden block
-    test_hidden_noise = get_noise(num_test, gen.input_dim)
-    test_hidden_block = gen.make_gen_block(10, 20, kernel_size=4, stride=1)
-    test_uns_noise = gen.unsqueeze_noise(test_hidden_noise)
-    hidden_output = test_hidden_block(test_uns_noise)
-
-    # Check that it works with other strides
-    test_hidden_block_stride = gen.make_gen_block(20, 20, kernel_size=4, stride=2)
-
-    test_final_noise = get_noise(num_test, gen.input_dim) * 20
-    test_final_block = gen.make_gen_block(10, 20, final_layer=True)
-    test_final_uns_noise = gen.unsqueeze_noise(test_final_noise)
-    final_output = test_final_block(test_final_uns_noise)
-
-    # Test the whole thing:
-    test_gen_noise = get_noise(num_test, gen.input_dim)
-    test_uns_gen_noise = gen.unsqueeze_noise(test_gen_noise)
-    gen_output = gen(test_uns_gen_noise)
-
-    '''# UNIT TESTS
-    assert tuple(hidden_output.shape) == (num_test, 20, 4, 4)
-    assert hidden_output.max() > 1
-    assert hidden_output.min() == 0
-    assert hidden_output.std() > 0.2
-    assert hidden_output.std() < 1
-    assert hidden_output.std() > 0.5
-
-    assert tuple(test_hidden_block_stride(hidden_output).shape) == (num_test, 20, 10, 10)
-
-    assert final_output.max().item() == 1
-    assert final_output.min().item() == -1
-
-    assert tuple(gen_output.shape) == (num_test, 1, 28, 28)
-    assert gen_output.std() > 0.5
-    assert gen_output.std() < 0.8
-'''
-
-    print("Success!")
     # Hyperparameters and loss
     criterion = nn.BCEWithLogitsLoss()
-    num_epochs = 200
-    z_dim = 64
-    display_step = 500
-    lr = 2e-4
-    device = 'cuda'
-    batch_size = 128
+    num_epochs = args.epochs
+    z_dim = args.z_dim
+    lr = args.lr
+    device = device
 
-    im_channel = 1
+    '''# Chest X ray params
+    display_step = 100
+    batch_size = 32
+'''
+
+
+    # MNIST  params
+    display_step = args.display_step
+    batch_size = args.batch_size
+    # print("Hello World")
+
+    im_channel = args.im_channel
 
     beta1 = 0.5
     beta2 = 0.999
 
 
-    test_input_dims()
-    print("Success!")
 
-
+    # wandb.login()
     wandb.init(entity='vs74', project='GAN')
-    config = { 'num_epochs' : num_epochs,
-    'z_dim' : z_dim,
-    'display_step' : display_step,
-    'lr' : lr,
-    'device' : device,
-    'batch_size' : batch_size,
-        }
-    wandb.config.update(config)
+    wandb.config.update(args)
 
     num_classes = {"MNIST": 10,
                     "COVID": 25,
                     "COVID-small": 3,
                     "RSNA": 2}
 
+
+    # generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(im_channel, 28, 28), num_classes=num_classes[args.dataset])
+
+
+    
     if args.dataset == "MNIST":
 
         transform = transforms.Compose([
@@ -379,21 +339,27 @@ if __name__ == "__main__":
             # transforms.CenterCrop(299),
             transforms.Grayscale(num_output_channels=im_channel), # for FID
             transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,)),
+            transforms.Normalize(tuple([0.5] * im_channel), tuple([0.5] * im_channel)),
         ])
         dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
         generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(im_channel, 28, 28), num_classes=num_classes[args.dataset])
 
+        model_path = os.path.join(os.getcwd(), "models")
+
     elif args.dataset == "COVID" or args.dataset == "COVID-small" or args.dataset == "RSNA":
         data_path, output_path, model_path = get_paths(args, args.user)
-        ds, transform = load_data(data_path, dataset_size=None, with_gan=args.with_gan, data_aug=False, dataset=args.dataset)
+        ds, transform = load_data(data_path, dataset_size=None, with_gan=args.with_gan, data_aug=False, dataset=args.dataset, im_channel=args.im_channel)
         dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True)
 
         # TODO: Play with different size of the generated image
-        generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(im_channel, 28, 28), num_classes=num_classes[args.dataset])
-
+        generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(im_channel, 64, 64), num_classes=num_classes[args.dataset])
+        # print("the dimensions are:-")
+        # print(generator_dim)
+        # print(critic_dim)
     else:
         raise Exception("Invalid Dataset Entered")
+
+
 
 
     gen = Generator(generator_dim, im_channel=im_channel).to(device)
@@ -402,10 +368,10 @@ if __name__ == "__main__":
     critic_opt = torch.optim.Adam(critic.parameters(), lr=lr, betas=(beta1, beta2))
 
 
-        # gradient = test_get_gradient((256, 1, 28, 28))
-    print("Success!")
-    # test_gradient_penalty((256, 1, 28, 28)): Assertion Error is encountered: check it
-    print("Success!")
+    #     # gradient = test_get_gradient((256, 1, 28, 28))
+    # print("Success!")
+    # # test_gradient_penalty((256, 1, 28, 28)): Assertion Error is encountered: check it
+    # print("Success!")
 
 
     gen = gen.apply(weights_init)
@@ -417,12 +383,30 @@ if __name__ == "__main__":
     curr_step = 0
 
 
-    critic_repeats = 5
-    c_lambda = 10
+    block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[2048]
+    model = InceptionV3([block_idx])
+    model=model.cuda()
+
+
+    # Use early stopping for FID
+    early_stopping = EarlyStopping(patience=args.patience, verbose=True, save_models=save_models, gen=gen, disc=critic, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
+
+
+    critic_repeats = args.critic_repeats
+    c_lambda = args.c_lambda
     critic_losses = []
     generator_losses = []
     # fake_features_list = []
     # real_features_list = []
+
+    #################################
+    # Save Models and log onto wandb
+    #################################
+
+    model_path = os.path.join(model_path, args.dataset, os.path.basename(__file__)[:-3])
+    print(model_path)
+    # save_models(gen=gen, disc=critic, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
+
 
     for epoch in tqdm(range(num_epochs)):
         
@@ -430,6 +414,7 @@ if __name__ == "__main__":
             curr_batch_size = len(real)
             real = real.to(device)
 
+            # print("Shape of the real is ", real.shape)
             # FID
             # real_features_list += [get_inception_model(device=device)(real).detach().to('cpu')] # Move the features to cpu
 
@@ -443,13 +428,15 @@ if __name__ == "__main__":
                 fake_noise = get_noise(curr_batch_size, z_dim, device=device)
 
                 # Conditional GAN on labels
-                labels_one_hot = get_one_hot_labels(labels, classes=10)
+                labels_one_hot = get_one_hot_labels(labels, classes=num_classes[args.dataset])
                 image_one_hot_labels = labels_one_hot[:, :, None, None]
                 image_one_hot_labels = image_one_hot_labels.repeat(1, 1, real.size(2), real.size(3))
 
                 fake_noise_combined = combine_vectors(fake_noise, labels_one_hot)
+                # print(fake_images.shape)
+                # print(image_one_hot_labels.shape)
 
-
+                # print(fake_noise_combined.shape)
                 fake_images = gen(fake_noise_combined)
 
                 # Preprocess the images for Inception network -- FID
@@ -464,9 +451,19 @@ if __name__ == "__main__":
                 assert tuple(fake_noise_combined.shape) == (curr_batch_size, fake_noise.shape[1] + labels_one_hot.shape[1])
 
                 # Conditional GAN on images
+                # print()
+                # print(fake_images.shape)
+                # print(image_one_hot_labels.shape)
+                # print()
+
+                # print(fake_images.shape)
+                # print(image_one_hot_labels.shape)
+
                 fake_images_and_labels = combine_vectors(fake_images, image_one_hot_labels)
                 real_images_and_labels = combine_vectors(real, image_one_hot_labels)
-
+                # print()
+                # print("******The shape is *********", fake_images_and_labels.shape)
+                # print()
                 critic_fake_preds = critic(fake_images_and_labels.detach())
                 critic_real_preds = critic(real_images_and_labels)
                 
@@ -481,6 +478,7 @@ if __name__ == "__main__":
                 # Update graidents
                 critic_loss.backward(retain_graph=True)
                 critic_opt.step()
+
             critic_losses += [mean_critic_loss]
 
 
@@ -489,14 +487,20 @@ if __name__ == "__main__":
             gen_opt.zero_grad()
 
             fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-            labels_one_hot = get_one_hot_labels(labels, classes=10)
+            
+            # Conditional Labels
+            labels_one_hot = get_one_hot_labels(labels, classes=num_classes[args.dataset])
             image_one_hot_labels = labels_one_hot[:, :, None, None]
             image_one_hot_labels = image_one_hot_labels.repeat(1, 1, real.size(2), real.size(3))
 
             fake_noise_combined = combine_vectors(fake_noise, labels_one_hot)
 
+            # print("Shape of fake noise is", fake_noise.shape)
+            # print("Shape of labels one hot is", labels_one_hot.shape)
             fake_images = gen(fake_noise_combined)
 
+            # print(fake_images.shape)
+            # print(image_one_hot_labels.shape)
             fake_images_and_labels = combine_vectors(fake_images, image_one_hot_labels)
 
             fake_predictions = critic(fake_images_and_labels)
@@ -520,24 +524,36 @@ if __name__ == "__main__":
 
             if curr_step > 0 and curr_step % display_step == 0:
                 print(f'Step: {curr_step} | Generator Loss:{sum(generator_losses[-display_step:]) / display_step} | Discriminator Loss: {sum(critic_losses[-display_step:]) / display_step}')
-                # noise_vectors = get_noise(curr_batch_size, z_dim, device=device)
-                # fake_images = gen(noise_vectors)
-                show_tensor_images(fake_images, type="fake")
-                show_tensor_images(real, type="real")
-                # print("Hello World")
-                # mean_generator_loss = 0.0
-                # mean_discriminator_loss = 0.0
+
+                if args.dataset == "MNIST":
+                    show_tensor_images(fake_images, type="fake", size=(im_channel, 28, 28))
+                    show_tensor_images(real, type="real", size=(im_channel, 28, 28))
+                else:
+                    show_tensor_images(fake_images, type="fake", size=(im_channel, 64, 64))
+                    show_tensor_images(real, type="real", size=(im_channel, 64, 64))
+                mean_generator_loss = 0
+                mean_discriminator_loss = 0
 
             curr_step += 1
+        
+        fretchet_dist=calculate_fretchet(real, fake_images, model) 
+        wandb.log({'FID': fretchet_dist})
+
+        early_stopping(fretchet_dist, model)
+
+        if early_stopping.early_stop:
+            print()
+            print("="*32 + "Early Stopping" + "="*32)
+            break
 
     print("Training is Completed ")    
 
-
-    #################################
-    # Save Models and log onto wandb
-    #################################
-
-    save_models(gen=gen, disc=critic)
+    if not os.path.exists(os.path.join(model_path, 'gen.pth')):
+        # Save the model
+        print()
+        print("*******************Best FID checkpointing didn't work**********")
+        print()
+        save_models(gen=gen, disc=critic, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
 
 
     ################################
@@ -551,16 +567,39 @@ if __name__ == "__main__":
     # Classes to Generate
     ##############################
 
+    # Load the best FID score of Generator
+    gen = load_generator_and_discriminator(gen=gen, gen_pretrained_path=os.path.join(model_path, 'gen.pth'))
 
-    n_interpolation = 9 # num of classes you want to generate
+    gen = gen.eval()
 
-    n_class_genrate = 5
+    n_interpolation = args.num_images_per_class # num of classes you want to generate
 
-    interpolation_label = get_one_hot_labels(torch.Tensor([n_class_generate]).long(), n_classes).repeat(n_interpolation, 1).float()
+    n_class_generate = args.n_class_generate
+
+    interpolation_label = get_one_hot_labels(torch.Tensor([n_class_generate]).long(), num_classes[args.dataset]).repeat(n_interpolation, 1).float()
+
+
+    noise = get_noise(n_interpolation, z_dim, device=device)
+    noise_and_labels = combine_vectors(noise, interpolation_label.to(device))
+    fake = gen(noise_and_labels)
+
+
+    # Save the images to generated directory
+    if not os.path.exists(os.path.join(model_path, 'generated')):
+        os.mkdir(os.path.join(model_path, 'generated'))
+    
+    # Save the images in 'model_path / generated' directory
+    for idx, img in tqdm(enumerate(fake)):
+        img_path =  os.path.join(model_path, 'generated', str(idx))
+        plt.imshow(img.permute(1, 2, 0).detach().cpu().numpy())
+        plt.savefig(img_path+'.png')
+
+    print("The images have been generated in the directory:-- ", os.path.join(model_path, 'generated'))
 
 
 
 
+    
 
 
 
