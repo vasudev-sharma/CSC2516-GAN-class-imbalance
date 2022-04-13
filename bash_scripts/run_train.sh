@@ -10,7 +10,7 @@
 ## MNIST 
 
 # DCGAN
-python scripts/GANs/DCGAN.py --dataset MNIST --user vasu --with_gan True --epochs 2 --lr 2e-4 --display_step 400 --z_dim 128 --GAN_type DCGAN --batch_size 64 --im_channel 3 --patience 30 --n_class_generate 1 --num_images_per_class 20
+python scripts/GANs/DCGAN.py --dataset MNIST --user vasu --with_gan True --epochs 200 --lr 2e-3 --display_step 400 --z_dim 128 --GAN_type DCGAN --batch_size 64 --im_channel 3 --patience 30 --n_class_generate 1 --num_images_per_class 20
 
 # DCGAN_GP
 # python scripts/GANs/DCGAN_GP.py --dataset MNIST --user vasu --with_gan True --epochs 200 --lr 2e-4 --display_step 200 --z_dim 128 --GAN_type DCGAN_GP --batch_size 64 --im_channel 3 --patience 30

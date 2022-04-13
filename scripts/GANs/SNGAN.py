@@ -8,7 +8,8 @@ from main import get_paths
 from torch.utils.data import DataLoader, Dataset
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
-from scripts.utils import InceptionV3, calculate_fretchet, EarlyStopping, save_models, get_deterministic_run, update_parser
+from scripts.utils import InceptionV3, calculate_fretchet, EarlyStopping, save_models, get_deterministic_run, update_parser, get_input_dimensions, load_generator_and_discriminator
+from scripts.GANs.DCGAN_GP_conditional import get_one_hot_labels, combine_vectors, interpolation_noise
 import os
 torch.manual_seed(0)
 import argparse
@@ -390,18 +391,33 @@ if __name__ == "__main__":
 
     for epoch in tqdm(range(num_epochs)):
         
-        for real, _ in tqdm(dataloader):
+        for real, labels in tqdm(dataloader):
             curr_batch_size = len(real)
             real = real.to(device)
+            labels = labels.to(device)
 
             # Update Discriminator
             disc_opt.zero_grad()
-            fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-            fake_images = gen(fake_noise)
-            fake_predictions = disc(fake_images.detach())
+            fake_noise = get_noise(curr_batch_size, z_dim, device=device) 
+            
+            # Conditional GAN on labels
+            labels_one_hot = get_one_hot_labels(labels, classes=num_classes[args.dataset])
+            image_one_hot_labels = labels_one_hot[:, :, None, None]
+            image_one_hot_labels = image_one_hot_labels.repeat(1, 1, real.size(2), real.size(3))
+
+            fake_noise_combined = combine_vectors(fake_noise, labels_one_hot)
+
+
+            fake_images = gen(fake_noise_combined)
+
+            fake_images_and_labels = combine_vectors(fake_images, image_one_hot_labels)
+            real_images_and_labels = combine_vectors(real, image_one_hot_labels)
+
+            fake_predictions = disc(fake_images_and_labels.detach())
             disc_fake_loss = criterion(fake_predictions, torch.zeros_like(fake_predictions))
-            real_predictions = disc(real)
+            real_predictions = disc(real_images_and_labels)
             disc_real_loss = criterion(real_predictions, torch.ones_like(real_predictions))
+
 
             disc_loss = (disc_fake_loss + disc_real_loss) / 2
 
@@ -413,8 +429,21 @@ if __name__ == "__main__":
             # Update Generator
             gen_opt.zero_grad()
             fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-            fake_images = gen(fake_noise)
-            fake_predictions = disc(fake_images)
+
+            # Conditional Labels
+            labels_one_hot = get_one_hot_labels(labels, classes=num_classes[args.dataset])
+            image_one_hot_labels = labels_one_hot[:, :, None, None]
+            image_one_hot_labels = image_one_hot_labels.repeat(1, 1, real.size(2), real.size(3))
+
+            fake_noise_combined = combine_vectors(fake_noise, labels_one_hot)
+
+
+            fake_images = gen(fake_noise_combined)
+
+            fake_images_and_labels = combine_vectors(fake_images, image_one_hot_labels)
+
+            fake_predictions = disc(fake_images_and_labels)
+
             gen_loss = criterion(fake_predictions, torch.ones_like(fake_predictions))
 
             gen_loss.backward()
@@ -465,4 +494,44 @@ if __name__ == "__main__":
         print("*******************Best FID checkpointing didn't work**********")
         print()
         save_models(gen=gen, disc=disc, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
+
+##############################
+    # Classes to Generate
+    ##############################
+
+    # Load the best FID score of Generator
+    gen = load_generator_and_discriminator(gen=gen, gen_pretrained_path=os.path.join(model_path, 'gen.pth'))
+
+    gen = gen.eval()
+
+    n_interpolation = args.num_images_per_class # num of classes you want to generate
+
+    n_class_generate = args.n_class_generate
+
+    interpolation_label = get_one_hot_labels(torch.Tensor([n_class_generate]).long(), num_classes[args.dataset]).repeat(n_interpolation, 1).float()
+
+
+    noise = get_noise(n_interpolation, z_dim, device=device)
+    noise_and_labels = combine_vectors(noise, interpolation_label.to(device))
+    fake = gen(noise_and_labels)
+
+
+    # Save the images to generated directory
+    if not os.path.exists(os.path.join(model_path, 'generated')):
+        os.mkdir(os.path.join(model_path, 'generated'))
+    
+    # Save the images in 'model_path / generated' directory
+    for idx, img in tqdm(enumerate(fake)):
+        img_path =  os.path.join(model_path, 'generated', str(idx))
+        plt.imshow(img.permute(1, 2, 0).detach().cpu().numpy())
+        plt.savefig(img_path+'.png')
+
+    print("The images have been generated in the directory:-- ", os.path.join(model_path, 'generated'))
+
+
+
+
+    
+
+
 
