@@ -253,13 +253,14 @@ if __name__ == "__main__":
         ])
         dataloader = DataLoader(datasets.MNIST('.', download=True, transform=transform), batch_size=batch_size, shuffle=True)
         # generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=10)
-
+        generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(im_channel, 28, 28), num_classes=num_classes[args.dataset])
         model_path = os.path.join(os.getcwd(), "models")
 
     elif args.dataset == "COVID" or args.dataset == "COVID-small" or args.dataset == "RSNA":
         data_path, output_path, model_path = get_paths(args, args.user)
         ds, transform = load_data(data_path, dataset_size=None, with_gan=args.with_gan, data_aug=False, dataset=args.dataset, im_channel=args.im_channel)
         dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True)
+        generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(im_channel, 64, 64), num_classes=num_classes[args.dataset])
 
         # TODO: Play with different size of the generated image
         # generator_dim, critic_dim = get_input_dimensions(z_dim, input_shape=(3, 28, 28), num_classes=num_classes[args.dataset])
@@ -270,9 +271,9 @@ if __name__ == "__main__":
 
         
 
-    gen = Generator(z_dim, im_channel=im_channel).to(device)
+    gen = Generator(generator_dim, im_channel=im_channel).to(device)
     gen_opt = torch.optim.Adam(gen.parameters(), lr=lr, betas=(beta1, beta2))
-    disc = Discriminator(im_channel=im_channel).to(device)
+    disc = Discriminator(critic_dim).to(device)
     disc_opt = torch.optim.Adam(disc.parameters(), lr=lr, betas=(beta1, beta2))
 
     
@@ -307,12 +308,11 @@ if __name__ == "__main__":
         for real, labels in tqdm(dataloader):
             curr_batch_size = len(real)
             real = real.to(device)
-            labels = labels.to(deice)
+            labels = labels.to(device)
 
             # Update Discriminator
             disc_opt.zero_grad()
             fake_noise = get_noise(curr_batch_size, z_dim, device=device)
-            fake_images = gen(fake_noise)
 
 
 
