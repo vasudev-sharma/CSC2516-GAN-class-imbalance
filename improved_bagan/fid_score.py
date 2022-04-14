@@ -63,8 +63,60 @@ generator = load_model(gen_path)
 
 # load real images from validation set
 real_imgs = np.load('x_val.npy')
+print("real_imgs.shape:", real_imgs.shape)
 real_label = np.load('y_val.npy')
 
+def calculate_total_fid():
+  # calculate FID for each class
+  #n_classes = len(np.unique(real_label))
+  sample_size = 1000
+  #class_names=["covid_19","no_findings","pneumonia"]
+  #for c in range(n_classes):
+  #print("class: {}".format(class_names[c]))
+  ########### get generated samples by class ###########
+  #label = np.ones(sample_size) * c
+  label = np.ones(sample_size)
+  noise = np.random.normal(0, 1, (sample_size, generator.input_shape[0][1]))
+  print('Latent dimension:', generator.input_shape[0][1])
+  gen_samples = generator.predict([noise, label])
+  gen_samples = gen_samples*0.5 + 0.5
+
+  ########### load real samples from training set ###########
+  # gen_samples = np.load('x_train.npy')
+  # gen_samples = np.load('y_train.npy')
+  # gen_samples = gen_samples[gen_label == c]
+  # shuffle(gen_samples)
+  # gen_samples = gen_samples[:1000]
+
+  ########### get real samples by class ###########
+  real_samples = real_imgs#[real_label == c]
+  #real_samples = real_imgs[real_label == c]
+
+  # shuffle(real_imgs)  # shuffle it or not
+  # real_samples = real_samples[:1000]  # less calculation
+  real_samples = real_samples.astype('float32') / 255.
+
+  # resize images
+  gen_samples = scale_images(gen_samples, (299,299,3))
+  real_samples = scale_images(real_samples, (299,299,3))
+  print('Scaled', gen_samples.shape, real_samples.shape)
+  print('Scaled range for generated', np.min(gen_samples[0]), np.max(gen_samples[0]))
+  print('Scaled range for real', np.min(real_samples[0]), np.max(real_samples[0]))
+
+  # preprocess images
+  gen_samples = preprocess_input(gen_samples)
+  real_samples = preprocess_input(real_samples)
+  print('Scaled range for generated', np.min(gen_samples[0]), np.max(gen_samples[0]))
+  print('Scaled range for real', np.min(real_samples[0]), np.max(real_samples[0]))
+
+  # calculate fid
+  fid = calculate_fid(model, gen_samples, real_samples)
+  print('>>FID total: %.3f' % (fid))
+  print('-'*50)
+
+calculate_total_fid()
+
+"""
 # calculate FID for each class
 n_classes = len(np.unique(real_label))
 sample_size = 1000
@@ -108,3 +160,56 @@ for c in range(n_classes):
     fid = calculate_fid(model, gen_samples, real_samples)
     print('>>FID(%d): %.3f' % (c, fid))
     print('-'*50)
+
+# %% --------------------------------------- Calculate Total FID for Generator -----------------------------------------------
+
+def calculate_total_fid():
+  # calculate FID for each class
+  #n_classes = len(np.unique(real_label))
+  sample_size = 1000
+  #class_names=["covid_19","no_findings","pneumonia"]
+  #for c in range(n_classes):
+  #print("class: {}".format(class_names[c]))
+  ########### get generated samples by class ###########
+  #label = np.ones(sample_size) * c
+  label = np.ones(sample_size)
+  noise = np.random.normal(0, 1, (sample_size, generator.input_shape[0][1]))
+  print('Latent dimension:', generator.input_shape[0][1])
+  gen_samples = generator.predict([noise, label])
+  gen_samples = gen_samples*0.5 + 0.5
+
+  ########### load real samples from training set ###########
+  # gen_samples = np.load('x_train.npy')
+  # gen_samples = np.load('y_train.npy')
+  # gen_samples = gen_samples[gen_label == c]
+  # shuffle(gen_samples)
+  # gen_samples = gen_samples[:1000]
+
+  ########### get real samples by class ###########
+  real_samples = real_imgs#[real_label == c]
+  #real_samples = real_imgs[real_label == c]
+
+  # shuffle(real_imgs)  # shuffle it or not
+  # real_samples = real_samples[:1000]  # less calculation
+  real_samples = real_samples.astype('float32') / 255.
+
+  # resize images
+  gen_samples = scale_images(gen_samples, (299,299,3))
+  real_samples = scale_images(real_samples, (299,299,3))
+  print('Scaled', gen_samples.shape, real_samples.shape)
+  print('Scaled range for generated', np.min(gen_samples[0]), np.max(gen_samples[0]))
+  print('Scaled range for real', np.min(real_samples[0]), np.max(real_samples[0]))
+
+  # preprocess images
+  gen_samples = preprocess_input(gen_samples)
+  real_samples = preprocess_input(real_samples)
+  print('Scaled range for generated', np.min(gen_samples[0]), np.max(gen_samples[0]))
+  print('Scaled range for real', np.min(real_samples[0]), np.max(real_samples[0]))
+
+  # calculate fid
+  fid = calculate_fid(model, gen_samples, real_samples)
+  print('>>FID total: %.3f' % (fid))
+  print('-'*50)
+
+calculate_total_fid()
+"""

@@ -69,12 +69,25 @@ for c in range(1, 10):
 # Use other datasets
 # GABRIEL: I'm doing my own preprocessing on the notebook's section: 
 # Final Preprocessing
+
 print("Xray dataset ====")
 images = np.load('x_train.npy')
 labels = np.load('y_train.npy')
 print("images.shape:",images.shape)
 print("labels.shape:",labels.shape)
 
+
+######################## Divide by percentage ##########################
+
+
+def divide_set_by_percentage(percentage, x_train, y_train):
+  total_samples = x_train.shape[0]
+  new_samples = int(total_samples*percentage)
+  return x_train[0:new_samples], y_train[0:new_samples]
+
+#images, labels = divide_set_by_percentage(0.5, images, labels)
+#print("Reduced size images.shape:",images.shape)
+#print("Reduced size labels.shape:",labels.shape)
 
 n_classes = len(np.unique(labels))
 print("Get number of classes:", n_classes)
@@ -100,7 +113,7 @@ print("real.shape=", real.shape)
 """
 
 # Train test split, for autoencoder (actually, this step is redundant if we already have test set)
-x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=0.15, shuffle=True, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=0.1, shuffle=True, random_state=42)
 print("x_train.shape:",x_train.shape)
 print("y_train.shape:",y_train.shape)
 print("x_test.shape:",x_test.shape)
@@ -116,14 +129,14 @@ img_size = x_train[0].shape
 len(np.unique(y_train)) #GABRIEL
 print("Again: check the number of classes:", n_classes)
 
-print("checking labels:")
-print(y_train)
-print(y_train[0].shape)
+#print("checking labels:")
+#print(y_train)
+#print(y_train[0].shape)
 
 # %% ---------------------------------- Hyperparameters ----------------------------------------------------------------
 
 optimizer = Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
-latent_dim=128
+latent_dim=128 # 
 # trainRatio === times(Train D) / times(Train G)
 trainRatio = 5
 
@@ -261,6 +274,7 @@ ae.fit([x_train, y_train], x_train,
        shuffle=True,
        validation_data=([x_test, y_test], x_test))
 
+
 # Show results of reconstructed images
 decoded_imgs = ae.predict([x_test, y_test])
 n = n_classes
@@ -293,6 +307,7 @@ try:
 except:
   print("directory was previously created")
 plt.savefig('bagan_gp_results/autoencoder_results.png')
+
 
 ####################### Use the pre-trained Autoencoder #########################
 # from tensorflow.keras.models import load_model
@@ -551,12 +566,14 @@ bagan_gp.compile(
 # Plot/save generated images through training
 def plt_img(generator, epoch):
     np.random.seed(42)
-    latent_gen = np.random.normal(size=(n_classes, latent_dim))
+    latent_gen = np.random.normal(size=(n_classes, latent_dim)) # GABRIEL: (3, 128)
 
-    x_real = x_test * 0.5 + 0.5
+    x_real = x_test * 0.5 + 0.5 #GABRIEL: x_test is the test set
     n = n_classes
+    class_names=["covid_19","no_findings","pneumonia"]
 
     plt.figure(figsize=(2*n, 2*(n+1)))
+    #plt.figure(figsize=(2*n, 2*2*(n+1))) # GABRIEL
     for i in range(n):
         # display original
         ax = plt.subplot(n+1, n, i + 1)
@@ -565,8 +582,11 @@ def plt_img(generator, epoch):
         else:
             plt.imshow(x_real[y_test == i][4].reshape(64, 64))
             plt.gray()
+
+        plt.text(1, 1, "real, class:{}".format(class_names[i]), bbox={'facecolor': 'white', 'pad': 1})
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
+        #samples = n*2 # GABRIEL
         for c in range(n):
             decoded_imgs = generator.predict([latent_gen, np.ones(n)*c])
             decoded_imgs = decoded_imgs * 0.5 + 0.5
@@ -577,6 +597,7 @@ def plt_img(generator, epoch):
             else:
                 plt.imshow(decoded_imgs[i].reshape(64, 64))
                 plt.gray()
+            plt.text(1, 1, "fake, class:{}".format(class_names[i]), bbox={'facecolor': 'white', 'pad': 1})
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
     plt.savefig('bagan_gp_results/generated_plot_%d.png' % epoch)
@@ -603,6 +624,7 @@ for learning_step in range(LEARNING_STEPS):
     g_loss_history += bagan_gp.history.history['g_loss']
     #wandb.log({"train_disc_loss":bagan_gp.history.history['d_loss']})
     #wandb.log({"train_gen_loss": bagan_gp.history.history['g_loss']})
+
     if (learning_step+1)%1 == 0:
         plt_img(bagan_gp.generator, learning_step)
         img_str = "bagan_gp_results/generated_plot_"+str(learning_step)+".png"
@@ -628,3 +650,8 @@ for i in range(LEARNING_STEPS):
 #print('saving as gif...')
 #imageio.mimsave(dir + 'training_demo.gif', ims, fps=3)
 bagan_gp.generator.save('bagan_gp_results/my_generator.h5')
+en.save('bagan_gp_results/my_encoder.h5')
+em.save('bagan_gp_results/my_embedding.h5')
+# en = load_model('bagan_gp_encoder.h5')
+# em = load_model('bagan_gp_embedding.h5')
+# de = load_model('bagan_gp_decoder.h5')
