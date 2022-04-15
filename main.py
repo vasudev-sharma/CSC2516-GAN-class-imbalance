@@ -1,4 +1,4 @@
-
+import shutil
 import wandb
 import os
 import numpy as np
@@ -51,6 +51,7 @@ def get_parser():
     parser.add_argument('--lr', help="Learning Rate", type=float, required=False, default=1e-3)
     parser.add_argument('--epochs', help="Total Number of Epochs", type=int, required=False, default=30)
     parser.add_argument('--data_aug', help="Add data augmentation or not", type=bool, required=False, default=False)
+    parser.add_argument('--gan_data_path', help='Enter trained images path', type=str, required=False, default="/w/247/vasu/CSC2516-GAN-class-imbalance/models/COVID-small/LSGAN/generated")
     FLAGS = parser.parse_args()
     return FLAGS
 
@@ -136,7 +137,7 @@ if __name__ == "__main__":
     print("MODEL PATH: {}".format(model_path + model_name))
     sys.stdout.flush()
 
-    dataset_full_train, dataset_test = load_data(data_path, dataset_size, with_gan, FLAGS.data_aug, FLAGS.dataset)
+    dataset_full_train, dataset_test = load_data(data_path, dataset_size, with_gan, FLAGS.data_aug, FLAGS.dataset, gan_data_path=FLAGS.gan_data_path)
 
     params = {}
     model_id = 1
@@ -263,5 +264,11 @@ if __name__ == "__main__":
 
     with open(output_path + "{}_{}_results2.pkl".format(idx, with_gan), "wb") as handle:
         pickle.dump(output, handle)
+    
+    # Remove Generated image directory
 
+    try:
+        shutil.rmtree(os.path.join(os.path.dirname(data_path), 'gan_original_images'))
+    except:
+        print('**************** Gan Original Directory doesn"t exits ********' )
     print("Done :)")

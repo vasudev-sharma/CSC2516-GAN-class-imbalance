@@ -1,3 +1,5 @@
+from distutils.dir_util import copy_tree
+import shutil
 import numpy as np
 import sys
 from tqdm import tqdm
@@ -34,7 +36,7 @@ from .utils import EarlyStopping
 use_gpu = torch.cuda.is_available()
 
 
-def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="RSNA", im_channel=1):
+def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="RSNA", im_channel=1, gan_data_path=''):
     # add data augmentations transforms here
     # TRAIN_WITH_GAN_FILENAME = "train_preprocessed_subset_{}_with_gan.csv".format(dataset_size)
     # TRAIN_WITHOUT_GAN_FILENAME = "train_preprocessed_subset_{}.csv".format(dataset_size)
@@ -91,19 +93,19 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
     
 
     if with_gan:
-        transform = torchvision.transforms.Compose([transforms.Grayscale(num_output_channels=im_channel),
+        transform_gan = torchvision.transforms.Compose([transforms.Grayscale(num_output_channels=im_channel),
                                                 # xrv.datasets.XRayCenterCrop(),
                                                 xrv.datasets.XRayResizer(64)])
         if dataset == "COVID":
-            ds_covid = xrv.datasets.COVID19_Dataset(imgpath=path,
-                                        csvpath=train_filename, transform=transform)
+            ds_covid_gan = xrv.datasets.COVID19_Dataset(imgpath=path,
+                                        csvpath=train_filename, transform=transform_gan)
         elif dataset == "RSNA":
-            ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
-                                    csvpath=train_filename, transform=transform, extension='.dcm')
+            ds_covid_gan = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
+                                    csvpath=train_filename, transform=transform_gan, extension='.dcm')
         elif dataset == "COVID-small":
             # TODO: Have same transforms
             # Better performance is without data aug --> need to check why
-            transform = transforms.Compose([
+            transform_gan = transforms.Compose([
                                     # transforms.Resize(299),
                                     # transforms.CenterCrop(299),
                                     transforms.Resize((64, 64)),
@@ -111,10 +113,39 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
                                     transforms.ToTensor(),
                                     transforms.Normalize(tuple([0.5] * im_channel), tuple([0.5] * im_channel)),
                                 ])
-            ds_covid = ImageFolder(path, transform=transform)
+            ds_covid_gan = ImageFolder(path, transform=transform_gan)
     
+        if not gan_data_path:
+            return ds_covid_gan, transform_gan
+        else:
+            print("*********Training uisng generated data***********")
+            new_data_path = os.path.join(os.path.dirname(path), 'gan_original_images')
+            try:
+                os.path.exists(new_data_path)
+            except:
+                print("*************Deleting the original Directory**************")
+                shutil.rmtree(new_data_path)
 
-        return ds_covid, transform
+            # Make temp new generated directory: Original + GAN generated images
+            # os.mkdir(new_data_path)
+
+            # TODO: Remove hardcoding
+            try:
+                
+                shutil.copytree(path, new_data_path)
+                print("********Direcotry created************")
+            except:
+                print("******* Couldn't copy the file *********** ")
+
+            try:
+                copy_tree(gan_data_path, os.path.join(new_data_path, 'Covid-19'))
+                print("*************Dataset has been processed************")
+            except:
+                print("Hello")
+                print("******* Couldn't copy the file *********** ")
+
+            
+            ds_covid = ImageFolder(new_data_path, transform=transform, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=3).float())
 
     # print("\nUsing labels: {}".format(train_filename))
     # sys.stdout.flush()

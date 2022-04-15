@@ -267,7 +267,9 @@ class EarlyStopping:
         else:
             self.best_score = score
             self.save_checkpoint(val_loss, model)
-            self.save_models(self.gen, self.disc, self.gen_pretrained_path, self.disc_pretrained_path)
+            if self.save_models is not None:
+                
+                self.save_models(self.gen, self.disc, self.gen_pretrained_path, self.disc_pretrained_path)
             self.counter = 0
 
     def save_checkpoint(self, val_loss, model):
