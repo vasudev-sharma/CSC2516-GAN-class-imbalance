@@ -396,8 +396,8 @@ if __name__ == "__main__":
     c_lambda = args.c_lambda
     critic_losses = []
     generator_losses = []
-    # fake_features_list = []
-    # real_features_list = []
+    # fake_images_list = []
+    # real_images_list = []
 
     #################################
     # Save Models and log onto wandb
@@ -417,6 +417,9 @@ if __name__ == "__main__":
             # print("Shape of the real is ", real.shape)
             # FID
             # real_features_list += [get_inception_model(device=device)(real).detach().to('cpu')] # Move the features to cpu
+            
+            # real_images_list.append(real)
+            
 
             labels = labels.to(device)
 
@@ -480,7 +483,8 @@ if __name__ == "__main__":
                 critic_opt.step()
 
             critic_losses += [mean_critic_loss]
-
+            # fake_images_list.append(fake_images)
+            
 
 
             # Update Generator
@@ -556,6 +560,7 @@ if __name__ == "__main__":
         save_models(gen=gen, disc=critic, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
 
 
+
     ################################
     # Compute FID Score
     ###############################
@@ -569,6 +574,14 @@ if __name__ == "__main__":
 
     # Load the best FID score of Generator
     gen = load_generator_and_discriminator(gen=gen, gen_pretrained_path=os.path.join(model_path, 'gen.pth'))
+
+    # Compute the average FID
+    # avg_fid = calculate_fretchet(torch.cat(real_images_list, dim=0), torch.cat(fake_images_list, dim=0), model)
+   
+    # print()
+    # print("Average FID is", avg_fid)
+    # wandb.config.avg_fid = avg_fid
+    # print()
 
     gen = gen.eval()
 

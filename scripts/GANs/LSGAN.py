@@ -11,6 +11,7 @@ from scripts.GANs.DCGAN_GP_conditional import get_one_hot_labels, combine_vector
 import os
 from scripts.training import load_data
 from main import get_paths
+from PIL import Image
 
 
 # wandb.login(key=['202040aaac395bbf5a4a47d433a5335b74b7fb0e'])
@@ -302,13 +303,17 @@ if __name__ == "__main__":
     mean_generator_loss = 0.0 
     curr_step = 0
 
-
+    # fake_images_list = []
+    # real_images_list = []
     for epoch in tqdm(range(num_epochs)):
         
         for real, labels in tqdm(dataloader):
             curr_batch_size = len(real)
             real = real.to(device)
             labels = labels.to(device)
+
+            # real_images_list.append(real)
+
 
             # Update Discriminator
             disc_opt.zero_grad()
@@ -325,6 +330,9 @@ if __name__ == "__main__":
 
 
             fake_images = gen(fake_noise_combined)
+
+            # fake_images_list.append(fake_images)
+
 
             fake_images_and_labels = combine_vectors(fake_images, image_one_hot_labels)
             real_images_and_labels = combine_vectors(real, image_one_hot_labels)
@@ -417,6 +425,9 @@ if __name__ == "__main__":
     # Load the best FID score of Generator
     gen = load_generator_and_discriminator(gen=gen, gen_pretrained_path=os.path.join(model_path, 'gen.pth'))
 
+        # Compute the average FID
+    # avg_fid = calculate_fretchet(torch.cat(real_images_list, dim=0), torch.cat(fake_images_list, dim=0), model)
+   
     gen = gen.eval()
 
     n_interpolation = args.num_images_per_class # num of classes you want to generate
@@ -438,8 +449,9 @@ if __name__ == "__main__":
     # Save the images in 'model_path / generated' directory
     for idx, img in tqdm(enumerate(fake)):
         img_path =  os.path.join(model_path, 'generated', str(idx))
-        plt.imshow(img.permute(1, 2, 0).detach().cpu().numpy())
-        plt.savefig(img_path+'.png')
+        img_pil = Image.fromarray(img.permute(1, 2, 0).detach().cpu().numpy(), mode='RGB').convert('L')
+        # plt.imshow(img.permute(1, 2, 0).detach().cpu().numpy())
+        img_pil.save(img_path+'.png')
 
     print("The images have been generated in the directory:-- ", os.path.join(model_path, 'generated'))
 
