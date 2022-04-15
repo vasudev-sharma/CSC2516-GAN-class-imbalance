@@ -114,10 +114,10 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
                                     transforms.Normalize(tuple([0.5] * im_channel), tuple([0.5] * im_channel)),
                                 ])
             ds_covid_gan = ImageFolder(path, transform=transform_gan)
-    
         if not gan_data_path:
             return ds_covid_gan, transform_gan
         else:
+
             print("*********Training uisng generated data***********")
             new_data_path = os.path.join(os.path.dirname(path), 'gan_original_images')
             try:

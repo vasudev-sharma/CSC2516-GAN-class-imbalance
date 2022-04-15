@@ -516,14 +516,22 @@ if __name__ == "__main__":
     fake = gen(noise_and_labels)
 
 
+
     # Save the images to generated directory
-    if not os.path.exists(os.path.join(model_path, 'generated')):
-        os.mkdir(os.path.join(model_path, 'generated'))
+    if os.path.exists(os.path.join(model_path, 'generated')):
+        shutil.rmtree(os.path.join(model_path, 'generated'))
+        print("********Old Directory Deleted*********")
+    
+    os.mkdir(os.path.join(model_path, 'generated'))
+    print("********New Directory Created*********")
+
     
     # Save the images in 'model_path / generated' directory
     for idx, img in tqdm(enumerate(fake)):
         img_path =  os.path.join(model_path, 'generated', str(idx))
-        plt.imshow(img.permute(1, 2, 0).detach().cpu().numpy())
+        # img_pil = Image.fromarray(img.permute(1, 2, 0).detach().cpu().numpy(), mode='RGB').convert('L')
+        plt.imshow(img.permute(1, 2, 0).detach().cpu().numpy(), cmap='gray')
+        plt.axis('off')
         plt.savefig(img_path+'.png')
 
     print("The images have been generated in the directory:-- ", os.path.join(model_path, 'generated'))
