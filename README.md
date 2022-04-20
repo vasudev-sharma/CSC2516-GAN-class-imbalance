@@ -1,6 +1,6 @@
-# CSC2516: GAN-based Data Augmentation for Chest X-ray Classification
+# GAN-based Data Augmentation for Chest X-ray Classification
 
-
+![](Images/schematic.jpeg)
 
 ## Download Data
 ```bash
@@ -26,8 +26,7 @@ For more info, read about the arguments `$ python main.py --help`
 | **GAN** | **Path** | **Loss** |
 | :---- | :-----: | -----: |
 |DCGAN|`scripts/GANs/DCGAN.py`| BCE Loss|
-|DCGAN with GP|`scripts/GANs/DCGAN_GP.py`| W-Loss + Gradient Penalty|
-| Conditional DCGAN with GP | `scripts/GANs/DCGAN_GP_conditional.py`| W-Loss + Gradient Penalty|
+| WGAN | `scripts/GANs/DCGAN_GP_conditional.py`| W-Loss + Gradient Penalty|
 | SNGAN | `scripts/GANs/SNGAN.py` | Spectral Normalization | 
 | LSGAN | `scripts/GANs/LSGAN.py` | Least Sqaures GAN | 
 
