@@ -13,7 +13,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--dataset", "COVID-small", "--user", "vasu", "--with_gan", "True", "--epochs", "1", "--lr", "2e-4", "--display_step", "100", "--z_dim", "100", "--GAN_type", "DCGAN_GP", "--batch_size", "2",  "--im_channel", "3"]
+            "args": ["--dataset", "RSNA", "--user", "vasu", "--with_gan", "True", "--epochs", "1", "--lr", "2e-4", "--display_step", "100", "--z_dim", "100", "--GAN_type", "DCGAN", "--batch_size", "2",  "--im_channel", "3"]
         }
     ]
 }

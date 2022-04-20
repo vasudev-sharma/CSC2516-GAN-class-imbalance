@@ -93,22 +93,53 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
     
 
     if with_gan:
-        transform_gan = torchvision.transforms.Compose([transforms.Grayscale(num_output_channels=im_channel),
-                                                # xrv.datasets.XRayCenterCrop(),
-                                                xrv.datasets.XRayResizer(64)])
+        # transform_gan = torchvision.transforms.Compose([
+        #                                         transforms.Resize((64, 64)),            
+        #                                         transforms.ToPILImage()
+        #                             # transforms.Grayscale(num_output_channels=im_channel), # for FID
+                        
+        #                             ])
         if dataset == "COVID":
             ds_covid_gan = xrv.datasets.COVID19_Dataset(imgpath=path,
                                         csvpath=train_filename, transform=transform_gan)
         elif dataset == "RSNA":
-            ds_covid_gan = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
-                                    csvpath=train_filename, transform=transform_gan, extension='.dcm')
-        elif dataset == "COVID-small":
-            # TODO: Have same transforms
-            # Better performance is without data aug --> need to check why
+            # ds_covid_gan = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
+            #                         csvpath=train_filename, transform=transform_gan, extension='.dcm')
+            
             transform_gan = transforms.Compose([
                                     # transforms.Resize(299),
                                     # transforms.CenterCrop(299),
-                                    transforms.Resize((64, 64)),
+                                    transforms.Resize((64, 64)),            
+                                    transforms.Grayscale(num_output_channels=im_channel), # for FID
+                                    transforms.ToTensor(),
+                                    transforms.Normalize(tuple([0.5] * im_channel), tuple([0.5] * im_channel)),
+                                ])
+
+            path = '/w/247/vasu/CSC2516-GAN-class-imbalance/data/RSNA_Pneumonia/preprocessed_data' # 62 % of the complete data
+            ds_covid_gan = ImageFolder(path, transform=transform_gan, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=2).float())
+            print(ds_covid_gan.class_to_idx)
+            print(len(ds_covid_gan))
+
+
+
+            len_train = int(0.8 * (len(ds_covid_gan))) # Since the training images is 60% of the data, 0.2 is essentially 10% of the data. 0.8 is 50% of the data
+
+            # 13375 = 50% of data
+            # 26750 = 100% of data
+            # Preprocess: Opacity 3740, Pneumonia: 12750: 16490
+            print(len_train)
+            len_test = len(ds_covid_gan) - len_train
+            print(len_test)
+            ds_covid_gan, _ = random_split(ds_covid_gan, [len_train, len_test])  
+
+
+            
+        elif dataset == "COVID-small":
+       
+            transform_gan = transforms.Compose([
+                                    # transforms.Resize(299),
+                                    # transforms.CenterCrop(299),
+                                    transforms.Resize((64, 64)),            
                                     transforms.Grayscale(num_output_channels=im_channel), # for FID
                                     transforms.ToTensor(),
                                     transforms.Normalize(tuple([0.5] * im_channel), tuple([0.5] * im_channel)),
@@ -117,8 +148,8 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
         if not gan_data_path:
             return ds_covid_gan, transform_gan
         else:
-
-            print("*********Training uisng generated data***********")
+            
+            """print("*********Training uisng generated data***********")
             new_data_path = os.path.join(os.path.dirname(path), 'gan_original_images')
             try:
                 os.path.exists(new_data_path)
@@ -138,41 +169,22 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
                 print("******* Couldn't copy the file *********** ")
 
             try:
-                copy_tree(gan_data_path, os.path.join(new_data_path, 'Covid-19'))
+                copy_tree(gan_data_path, os.path.join(new_data_path, 'Pnemumonia'))
                 print("*************Dataset has been processed************")
             except:
                 print("Hello")
-                print("******* Couldn't copy the file *********** ")
+                print("******* Couldn't copy the file *********** ")"""
 
             
-            ds_covid = ImageFolder(new_data_path, transform=transform, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=3).float())
+            ds_covid_generated = ImageFolder("/w/247/vasu/CSC2516-GAN-class-imbalance/models/RSNA/DCGAN/rsna_50", transform=transform_gan, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=2).float())
+            ds_covid = ds_covid_generated + ds_covid_gan
 
-    # print("\nUsing labels: {}".format(train_filename))
-    # sys.stdout.flush()
-
-    # d_chex_train = xrv.datasets.CheX_Dataset(imgpath=path,
-    #                                    csvpath=train_filename,
-    #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
-
-    # ds_covid = xrv.datasets.RSNA_Pneumonia_Dataset(imgpath=path,
-                                    #    csvpath=train_filename, transform=transform, extension='.dcm')
+            print("Length of new covid:", len(ds_covid_gan))
 
     len_train = int(0.8 * (len(ds_covid)))
     len_test = len(ds_covid) - len_train
     ds_covid_train, ds_covid_test = random_split(ds_covid, [len_train, len_test])  
 
-    # ds_frac_train_len = int(frac * len(ds_covid_train))
-    # ds_val_len = len(ds_covid_train) - ds_frac_train_len
-    # ds_covid_frac_train, ds_covid_frac_valid = random_split(ds_covid_train, [ds_frac_train_len, ds_val_len])
-    # d_chex_test = xrv.datasets.CheX_Dataset(imgpath=path,
-    #                                    csvpath=path + "test_train_preprocessed.csv",
-    #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
-
-    # d_chex_test = xrv.datasets.CheX_Dataset(imgpath=path,
-    #                                    csvpath=path + "test_train_preprocessed.csv",
-    #                                    transform=transform, views=["PA", "AP"], unique_patients=False)
-
-    # print("The length of the training dataset is", ds_covid_frac_train)
 
     return ds_covid_train, ds_covid_test
 
@@ -218,7 +230,7 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
         train_loss = 0
         count = 0
         for idx, data_all in enumerate(tqdm(train_loader)):
-            if dataset == "COVID-small":
+            if dataset == "COVID-small" or dataset == 'RSNA':
                 data, target = data_all[0],  data_all[1]
             else:
                 data, target = data_all['img'],  data_all['lab']
@@ -243,7 +255,7 @@ def training(model, num_epochs, model_path, model_name, train_loader, valid_load
         valid_loss = 0
         with torch.no_grad():
             for data_all in tqdm(valid_loader):
-                if dataset == "COVID-small":
+                if dataset == "COVID-small" or dataset == 'RSNA':
                     data, target = data_all[0],  data_all[1]
                 else:
                     data, target = data_all['img'],  data_all['lab']
@@ -326,7 +338,7 @@ def testing(model, test_loader, nnClassCount, class_names, dataset="COVID"):
             if batch_idx % 100 == 0:
                 print(batch_idx)
 
-            if dataset == "COVID-small":
+            if dataset == "COVID-small" or dataset == "RSNA":
                     data, target = data_all[0],  data_all[1]
             else:
                 data, target = data_all['img'],  data_all['lab']

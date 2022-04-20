@@ -15,12 +15,12 @@ from scripts.utils import InceptionV3, calculate_fretchet, EarlyStopping, save_m
 from scripts.GANs.DCGAN_GP_conditional import get_one_hot_labels, combine_vectors, interpolation_noise
 from scripts.training import load_data
 from main import get_paths
-import apa.dnnlib
-from apa.torch_utils import misc
-from apa.torch_utils import training_stats
-from apa.torch_utils.ops import conv2d_gradfix
-from apa.torch_utils.ops import grid_sample_gradfix
-from apa.apa import AugmentPipe
+# import apa.dnnlib
+# from apa.torch_utils import misc
+# from apa.torch_utils import training_stats
+# from apa.torch_utils.ops import conv2d_gradfix
+# from apa.torch_utils.ops import grid_sample_gradfix
+# from apa.apa import AugmentPipe
 
 # wandb.login(key=['202040aaac395bbf5a4a47d433a5335b74b7fb0e'])
 
@@ -293,37 +293,35 @@ if __name__ == "__main__":
     # Use early stopping for FID
     block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[2048]
     model = InceptionV3([block_idx])
-    model=model.cuda()
+    model=model.to(device)
     early_stopping = EarlyStopping(patience=args.patience, verbose=True, save_models=save_models, gen=gen, disc=disc, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
 
     #################################
     # Deceive D
     #################################
 
+    # augment_kwargs = None
+    # apa_target = None
+    # augment_p = 0
+    # rank  = 0
+    # aug = AugmentPipe()
+    #   # Setup augmentation.
+    # if rank == 0:
+    #     print('Setting up augmentation...')
+    # augment_pipe = None
+    # apa_stats = None
+    # if (augment_kwargs is not None) and (augment_p > 0 or apa_target is not None):
+    #     augment_pipe = apa.dnnlib.util.construct_class_by_name(**augment_kwargs).train().requires_grad_(False).to(device) # subclass of torch.nn.Module
+    #     augment_pipe.p.copy_(torch.as_tensor(augment_p))
+    #     if apa_target is not None:
+    #         apa_stats = training_stats.Collector(regex='Loss/signs/real')
+
+    # apa_kimg = 500
+    # # batch_idx = 
+    # apa_interval = 4
 
 
-    augment_kwargs = None
-    apa_target = None
-    augment_p = 0
-    rank  = 0
-    aug = AugmentPipe()
-      # Setup augmentation.
-    if rank == 0:
-        print('Setting up augmentation...')
-    augment_pipe = None
-    apa_stats = None
-    if (augment_kwargs is not None) and (augment_p > 0 or apa_target is not None):
-        augment_pipe = apa.dnnlib.util.construct_class_by_name(**augment_kwargs).train().requires_grad_(False).to(device) # subclass of torch.nn.Module
-        augment_pipe.p.copy_(torch.as_tensor(augment_p))
-        if apa_target is not None:
-            apa_stats = training_stats.Collector(regex='Loss/signs/real')
-
-    apa_kimg = 500
-    # batch_idx = 
-    apa_interval = 4
-
-
-    print(augment_pipe)
+    # print(augment_pipe)
 
 
 
@@ -346,7 +344,26 @@ if __name__ == "__main__":
 
     for epoch in tqdm(range(num_epochs)):
         
-        for batch_idx, (real, labels) in enumerate(tqdm(dataloader)):
+        
+        for out in tqdm(dataloader):
+
+            if args.dataset == "RSNA":
+                real, labels = out['img'], out['lab']
+                print(labels)
+
+                labels = labels.sum(dim=1)
+                # One hot encoding
+                labels[labels == torch.tensor(0.0)] = torch.tensor(0)
+                labels[labels == torch.tensor(2.0)] = torch.tensor(1)
+                print(labels)
+                labels = labels.long()
+
+
+
+                # # label = torch.where(label == torch.tensor(1.), 0.)
+                # label_ones_idx == torch.tensor(1.0)
+                # label[lalbels_ones_idx] = torch.
+
             curr_batch_size = len(real)
             real = real.to(device)
             labels = labels.to(device)
@@ -364,7 +381,10 @@ if __name__ == "__main__":
 
 
             fake_images = gen(fake_noise_combined)
-
+            print()
+            print(fake_images.shape)
+            print(image_one_hot_labels.shape)
+            print()
             fake_images_and_labels = combine_vectors(fake_images, image_one_hot_labels)
             real_images_and_labels = combine_vectors(real, image_one_hot_labels)
 
@@ -428,11 +448,11 @@ if __name__ == "__main__":
                 mean_generator_loss = 0
                 mean_discriminator_loss = 0
 
-            # Execute APA heuristic.
-            if (apa_stats is not None) and (batch_idx % apa_interval == 0):
-                apa_stats.update()
-                adjust = np.sign(apa_stats['Loss/signs/real'] - apa_target) * (batch_size * apa_interval) / (apa_kimg * 1000)
-                augment_pipe.p.copy_((augment_pipe.p + adjust).max(misc.constant(0, device=device)))
+            # # Execute APA heuristic.
+            # if (apa_stats is not None) and (batch_idx % apa_interval == 0):
+            #     apa_stats.update()
+            #     adjust = np.sign(apa_stats['Loss/signs/real'] - apa_target) * (batch_size * apa_interval) / (apa_kimg * 1000)
+            #     augment_pipe.p.copy_((augment_pipe.p + adjust).max(misc.constant(0, device=device)))
 
             curr_step += 1
 
