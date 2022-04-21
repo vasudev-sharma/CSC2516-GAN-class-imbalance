@@ -9,7 +9,7 @@
 # python scripts/GANs/DCGAN_GP_conditional.py --dataset MNIST --user vasu --with_gan True
 
 ##### Supervised Baseline Trainig ########
-python main.py --with_gan "True" --idx 0 --user "vasu" --skip_training ""  --dataset_size  10  --dataset  "RSNA"  --fraction  0.1  --epochs  30  --data_aug  "True" --gan_data_path "/w/247/vasu/CSC2516-GAN-class-imbalance/models/RSNA/DCGAN/rsna_50"
+# python main.py --with_gan "True" --idx 0 --user "vasu" --skip_training ""  --dataset_size  10  --dataset  "COVID-small"  --fraction  1  --epochs  30  --data_aug  "True" --gan_data_path "/w/247/vasu/CSC2516-GAN-class-imbalance/models/COVID-small/BAGAN_imp/generated_covid_100_epochs"
 
 
 # python test.py
@@ -49,7 +49,7 @@ python main.py --with_gan "True" --idx 0 --user "vasu" --skip_training ""  --dat
 # python scripts/GANs/SNGAN.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-3 --display_step 100 --z_dim 128 --GAN_type SNGAN --batch_size 32  --im_channel 3 --patience 30 --n_class_generate 0 --num_images_per_class 250
 
 # LSGAN
-# python scripts/GANs/LSGAN.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-3 --display_step 100 --z_dim 128 --GAN_type LSGAN --batch_size 32 --im_channel 3 --patience 30 --n_class_generate 0 --num_images_per_class 250
+python scripts/GANs/LSGAN.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-3 --display_step 100 --z_dim 128 --GAN_type LSGAN --batch_size 32 --im_channel 3 --patience 30 --n_class_generate 2 --num_images_per_class 100
 
 
 

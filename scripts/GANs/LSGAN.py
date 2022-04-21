@@ -1,3 +1,4 @@
+import numpy as np
 import shutil
 import wandb 
 import torch
@@ -303,7 +304,7 @@ if __name__ == "__main__":
     mean_discriminator_loss = 0.0 
     mean_generator_loss = 0.0 
     curr_step = 0
-
+    '''
     # fake_images_list = []
     # real_images_list = []
     for epoch in tqdm(range(num_epochs)):
@@ -418,8 +419,8 @@ if __name__ == "__main__":
         print("*******************Best FID checkpointing didn't work**********")
         print()
         save_models(gen=gen, disc=disc, gen_pretrained_path=os.path.join(model_path, 'gen.pth'), disc_pretrained_path=os.path.join(model_path, 'disc.pth'))
-
-##############################
+    '''
+    ##############################
     # Classes to Generate
     ##############################
 
@@ -442,7 +443,11 @@ if __name__ == "__main__":
     noise_and_labels = combine_vectors(noise, interpolation_label.to(device))
     fake = gen(noise_and_labels)
 
-
+    ########################
+    #  save Numpy array's
+    np.save('pneumonia.npy', fake.detach().cpu().numpy())
+    print("Numpy array has been saved")
+    '''
     # Save the images to generated directory
     if os.path.exists(os.path.join(model_path, 'generated')):
         shutil.rmtree(os.path.join(model_path, 'generated'))
@@ -462,7 +467,7 @@ if __name__ == "__main__":
 
     print("The images have been generated in the directory:-- ", os.path.join(model_path, 'generated'))
 
-
+    '''
 
 
     

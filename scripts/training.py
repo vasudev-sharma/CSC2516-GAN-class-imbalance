@@ -145,11 +145,14 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
                                     transforms.Normalize(tuple([0.5] * im_channel), tuple([0.5] * im_channel)),
                                 ])
             ds_covid_gan = ImageFolder(path, transform=transform_gan)
+            print("**"*12)
+            print(ds_covid_gan.class_to_idx)
+            print("**"*12)
         if not gan_data_path:
             return ds_covid_gan, transform_gan
         else:
             
-            """print("*********Training uisng generated data***********")
+            print("*********Training uisng generated data***********")
             new_data_path = os.path.join(os.path.dirname(path), 'gan_original_images')
             try:
                 os.path.exists(new_data_path)
@@ -169,17 +172,21 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
                 print("******* Couldn't copy the file *********** ")
 
             try:
-                copy_tree(gan_data_path, os.path.join(new_data_path, 'Pnemumonia'))
+                copy_tree(gan_data_path, os.path.join(new_data_path, 'Covid-19'))
                 print("*************Dataset has been processed************")
             except:
                 print("Hello")
-                print("******* Couldn't copy the file *********** ")"""
+                print("******* Couldn't copy the file *********** ")
 
+            ds_covid = ImageFolder(new_data_path, transform=transform_gan, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=3).float())
             
-            ds_covid_generated = ImageFolder("/w/247/vasu/CSC2516-GAN-class-imbalance/models/RSNA/DCGAN/rsna_50", transform=transform_gan, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=2).float())
-            ds_covid = ds_covid_generated + ds_covid_gan
+            ###########
+            # RSNA
+            ###########
+            # ds_covid_generated = ImageFolder("/w/247/vasu/CSC2516-GAN-class-imbalance/models/RSNA/DCGAN/rsna_50", transform=transform_gan, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=2).float())
+            # ds_covid = ds_covid_generated + ds_covid_gan
 
-            print("Length of new covid:", len(ds_covid_gan))
+            # print("Length of new covid:", len(ds_covid_gan))
 
     len_train = int(0.8 * (len(ds_covid)))
     len_test = len(ds_covid) - len_train

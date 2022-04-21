@@ -19,10 +19,7 @@ $ python main.py --with_gan "" --idx 0 --user "vasu" --skip_training ""  --datas
 
 For more info, read about the arguments `$ python main.py --help`
 
-
-
-
-## GANs: TODO
+## GANs
 | **GAN** | **Path** | **Loss** |
 | :---- | :-----: | -----: |
 |DCGAN|`scripts/GANs/DCGAN.py`| BCE Loss|
@@ -31,11 +28,12 @@ For more info, read about the arguments `$ python main.py --help`
 | LSGAN | `scripts/GANs/LSGAN.py` | Least Sqaures GAN | 
 
 ```python
-$ python scripts/GANs/SNGAN.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-3 --display_step 100 --z_dim 128 --GAN_type SNGAN --batch_size 32  --im_channel 3 --patience 30 --n_class_generate 1 --num_images_per_class 20
+$ python scripts/GANs/SNGAN.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-3 --display_step 100 --z_dim 128 --GAN_type SNGAN --batch_size 32  --im_channel 3 --patience 30 --n_class_generate 0 --num_images_per_class 250
 ```
 For more info, read about the arguments `$ python scripts/GANs/SNGAN.py --help`
 
-## Acknowledgements: TODO
+## Acknowledgements
 This repository makes use of the code from the following repositories. We thank all the authors for making their code publically available.
-- [this repository](https://github.com/ssundaram21/6.819FinalProjectRAMP)
+- https://github.com/ssundaram21/6.819FinalProjectRAMP
+- https://github.com/GH920/improved-bagan-gp
 
