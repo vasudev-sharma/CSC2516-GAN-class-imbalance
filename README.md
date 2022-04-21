@@ -20,6 +20,8 @@ $ python main.py --with_gan "" --idx 0 --user "vasu" --skip_training ""  --datas
 For more info, read about the arguments `$ python main.py --help`
 
 ## GANs
+![](Images/fake_images.png)
+
 | **GAN** | **Path** | **Loss** |
 | :---- | :-----: | -----: |
 |DCGAN|`scripts/GANs/DCGAN.py`| BCE Loss|

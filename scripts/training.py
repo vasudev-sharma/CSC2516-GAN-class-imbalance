@@ -178,7 +178,7 @@ def load_data(path, dataset_size=None, with_gan=False, data_aug=False, dataset="
                 print("Hello")
                 print("******* Couldn't copy the file *********** ")
 
-            ds_covid = ImageFolder(new_data_path, transform=transform_gan, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=3).float())
+            ds_covid = ImageFolder(new_data_path, transform=transform, target_transform=lambda t: F.one_hot(torch.tensor(t), num_classes=3).float())
             
             ###########
             # RSNA
