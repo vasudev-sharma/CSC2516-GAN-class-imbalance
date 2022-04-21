@@ -28,6 +28,7 @@ For more info, read about the arguments `$ python main.py --help`
 | WGAN | `scripts/GANs/DCGAN_GP_conditional.py`| W-Loss + Gradient Penalty|
 | SNGAN | `scripts/GANs/SNGAN.py` | Spectral Normalization | 
 | LSGAN | `scripts/GANs/LSGAN.py` | Least Sqaures GAN | 
+| Imp BAGAN | `scripts/GANs/improved_bagan/imp_bagan.py` | Gradient Penalty GAN | 
 
 ```python
 $ python scripts/GANs/SNGAN.py --dataset COVID-small --user vasu --with_gan True --epochs 200 --lr 2e-3 --display_step 100 --z_dim 128 --GAN_type SNGAN --batch_size 32  --im_channel 3 --patience 30 --n_class_generate 0 --num_images_per_class 250
