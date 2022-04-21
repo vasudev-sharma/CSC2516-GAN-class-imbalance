@@ -1,4 +1,4 @@
-# GAN-based Data Augmentation for Chest X-ray Classification
+# GAN-based Data Augmentation for class imblance in Chest X-ray
 
 ![](Images/schematic.jpeg)
 
