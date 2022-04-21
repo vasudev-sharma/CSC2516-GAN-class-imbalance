@@ -1,4 +1,8 @@
 # %% --------------------------------------- Load Packages -------------------------------------------------------------
+"""
+Original source: https://github.com/GH920/improved-bagan-gp
+CSC2516 - GAN class imbalance
+"""
 import os
 import random
 import cv2
@@ -14,10 +18,7 @@ from tensorflow.keras.layers import Input, Reshape, Dense, Dropout, \
 from tensorflow.keras.initializers import glorot_normal
 from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
-# GABRIEL
-import wandb
-wandb.init(project="xray_improved_bagan_v2.0", entity="jgim")
-
+from tensorflow.keras.models import load_model
 
 # %% --------------------------------------- Fix Seeds -----------------------------------------------------------------
 SEED = 42
@@ -30,130 +31,54 @@ weight_init = glorot_normal(seed=SEED)
 # %% ---------------------------------- Data Preparation ---------------------------------------------------------------
 def change_image_shape(images):
     shape_tuple = images.shape
-    #print(len(shape_tuple))
     if len(shape_tuple) == 3:
         images = images.reshape(-1, shape_tuple[-1], shape_tuple[-1], 1)
-        #print("inside shape:", images.shape)
     elif shape_tuple == 4 and shape_tuple[-1] > 3:
         images = images.reshape(-1, shape_tuple[-1], shape_tuple[-1], shape_tuple[1])
     return images
-
-######################## MNIST / CIFAR ##########################
-"""
-# # Load MNIST Fashion
-from tensorflow.keras.datasets.fashion_mnist import load_data
-# # Load CIFAR-10
-# from tensorflow.keras.datasets.cifar10 import load_data
-
-# # Load training set
-(images, labels), (_,_) = load_data()
-images = images[0:10001]
-labels = labels[0:10001]
-
-print("images.shape:",images.shape)
-print("labels.shape:",labels.shape)
-
-images = change_image_shape(images) # GABRIEL: this outputs (10001, 28, 28, 1)
-#print("shape -1: ",images.shape[-1])
-
-labels = labels.reshape(-1) # GABRIEL: this is to "flatten"
-# Convert from ints to floats
-# images = images.astype('float32')
-
-# Create imbalanced version
-for c in range(1, 10):
-    images = np.vstack([images[labels!=c], images[labels==c][:100*c]])
-    labels = np.append(labels[labels!=c], np.ones(100*c) * c)
-"""
-######################## Our Dataset ##########################
-# Use other datasets
-# GABRIEL: I'm doing my own preprocessing on the notebook's section: 
-# Final Preprocessing
-
+######################## X-ray datasets ##########################
 print("Xray dataset ====")
-images = np.load('x_train.npy')
-labels = np.load('y_train.npy')
-print("images.shape:",images.shape)
-print("labels.shape:",labels.shape)
-
+images = np.load('x_train_covid.npy')
+labels = np.load('y_train_covid.npy')
 
 ######################## Divide by percentage ##########################
-
-
 def divide_set_by_percentage(percentage, x_train, y_train):
   total_samples = x_train.shape[0]
   new_samples = int(total_samples*percentage)
   return x_train[0:new_samples], y_train[0:new_samples]
 
-#images, labels = divide_set_by_percentage(0.5, images, labels)
-#print("Reduced size images.shape:",images.shape)
-#print("Reduced size labels.shape:",labels.shape)
-
-n_classes = len(np.unique(labels))
-print("Get number of classes:", n_classes)
-#images = change_image_shape(images) # GABRIEL: temporarily commented
 ######################## Preprocessing ##########################
 # Set channel
-channel = images.shape[-1] # GABRIEL: this is by default, I have to check it
-print("set channel:", channel)
-
-"""
-# GABRIEL: commented because this is done via keras
-# Set channel
 channel = images.shape[-1]
-print("channel:", channel)
-
-# to 64 x 64 x channel
-real = np.ndarray(shape=(images.shape[0], 64, 64, channel))
-for i in range(images.shape[0]):
-    real[i] = cv2.resize(images[i], (64, 64)).reshape((64, 64, channel))
-
-print("real[1].shape=", real[1].shape)
-print("real.shape=", real.shape)
-"""
-
-# Train test split, for autoencoder (actually, this step is redundant if we already have test set)
+# Train test split, for autoencoder
 x_train, x_test, y_train, y_test = train_test_split(images, labels, test_size=0.1, shuffle=True, random_state=42)
 print("x_train.shape:",x_train.shape)
 print("y_train.shape:",y_train.shape)
 print("x_test.shape:",x_test.shape)
 print("y_test.shape:",y_test.shape)
-
 # It is suggested to use [-1, 1] input for GAN training
 x_train = (x_train.astype('float32') - 127.5) / 127.5
 x_test = (x_test.astype('float32') - 127.5) / 127.5
-
 # Get image size
 img_size = x_train[0].shape
 # Get number of classes
-len(np.unique(y_train)) #GABRIEL
-print("Again: check the number of classes:", n_classes)
-
-#print("checking labels:")
-#print(y_train)
-#print(y_train[0].shape)
+n_classes = len(np.unique(y_train))
 
 # %% ---------------------------------- Hyperparameters ----------------------------------------------------------------
-
 optimizer = Adam(lr=0.0002, beta_1=0.5, beta_2=0.9)
 latent_dim=128 # 
 # trainRatio === times(Train D) / times(Train G)
 trainRatio = 5
-
 # %% ---------------------------------- Models Setup -------------------------------------------------------------------
 # Build Generator/Decoder
 def decoder():
     # weight initialization
     init = RandomNormal(stddev=0.02)
-
     noise_le = Input((latent_dim,))
-
     x = Dense(4*4*256)(noise_le)
     x = LeakyReLU(alpha=0.2)(x)
-
     ## Size: 4 x 4 x 256
     x = Reshape((4, 4, 256))(x)
-
     ## Size: 8 x 8 x 128
     x = Conv2DTranspose(filters=128,
                         kernel_size=(4, 4),
@@ -175,8 +100,6 @@ def decoder():
 
     ## Size: 64 x 64 x 3
     generated = Conv2DTranspose(channel, (4, 4), strides=(2, 2), padding='same', activation='tanh', kernel_initializer=init)(x)
-
-
     generator = Model(inputs=noise_le, outputs=generated)
     return generator
 
@@ -184,57 +107,31 @@ def decoder():
 def encoder():
     # weight initialization
     init = RandomNormal(stddev=0.02)
-
     img = Input(img_size)
-
     x = Conv2D(64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=init)(img)
-    # x = LayerNormalization()(x) # It is not suggested to use BN in Discriminator of WGAN
     x = LeakyReLU(0.2)(x)
-    # x = Dropout(0.3)(x)
-
     x = Conv2D(128, (4, 4), strides=(2, 2), padding='same', kernel_initializer=init)(x)
-    # x = LayerNormalization()(x)
     x = LeakyReLU(0.2)(x)
-    # x = Dropout(0.3)(x)
-
     x = Conv2D(128, (4, 4), strides=(2, 2), padding='same', kernel_initializer=init)(x)
-    # x = LayerNormalization()(x)
     x = LeakyReLU(0.2)(x)
-    # x = Dropout(0.3)(x)
-
     x = Conv2D(256, (4, 4), strides=(2, 2), padding='same', kernel_initializer=init)(x)
-    # x = LayerNormalization()(x)
     x = LeakyReLU(0.2)(x)
-    # x = Dropout(0.3)(x)
 
     # 4 x 4 x 256
     feature = Flatten()(x)
 
     feature = Dense(latent_dim)(feature)
     out = LeakyReLU(0.2)(feature)
-
     model = Model(inputs=img, outputs=out)
     return model
 
 # Build Embedding model
 def embedding_labeled_latent():
-    # # weight initialization
-    # init = RandomNormal(stddev=0.02)
-
     label = Input((1,), dtype='int32')
     noise = Input((latent_dim,))
-    # ne = Dense(256)(noise)
-    # ne = LeakyReLU(0.2)(ne)
-
     le = Flatten()(Embedding(n_classes, latent_dim)(label))
-    # le = Dense(256)(le)
-    # le = LeakyReLU(0.2)(le)
-
     noise_le = multiply([noise, le])
-    # noise_le = Dense(latent_dim)(noise_le)
-
     model = Model([noise, label], noise_le)
-
     return model
 
 # Build Autoencoder
@@ -257,23 +154,11 @@ de = decoder()
 em = embedding_labeled_latent()
 ae = autoencoder_trainer(en, de, em)
 
-
-"""
-#GABRIEL:
-print("x_train.shape:",x_train.shape)
-print("y_train.shape:",y_train.shape)
-print("x_test.shape:",x_test.shape)
-print("y_test.shape:",y_test.shape)
-"""
-
-
-# GABRIEL: here train/test data is used to fit the autoencoder
 ae.fit([x_train, y_train], x_train,
-       epochs=30,
+       epochs=50,
        batch_size=128,
        shuffle=True,
        validation_data=([x_test, y_test], x_test))
-
 
 # Show results of reconstructed images
 decoded_imgs = ae.predict([x_test, y_test])
@@ -308,55 +193,29 @@ except:
   print("directory was previously created")
 plt.savefig('bagan_gp_results/autoencoder_results.png')
 
-
-####################### Use the pre-trained Autoencoder #########################
-# from tensorflow.keras.models import load_model
-# en = load_model('bagan_gp_encoder.h5')
-# em = load_model('bagan_gp_embedding.h5')
-# de = load_model('bagan_gp_decoder.h5')
-
 # Build Discriminator without inheriting the pre-trained Encoder
 # Similar to cWGAN
 def discriminator_cwgan():
-    # weight initialization
     init = RandomNormal(stddev=0.02)
-
     img = Input(img_size)
     label = Input((1,), dtype='int32')
-
-
     x = Conv2D(64, kernel_size=(4, 4), strides=(2, 2), padding='same', kernel_initializer=init)(img)
-    # x = LayerNormalization()(x) # It is not suggested to use BN in Discriminator of WGAN
     x = LeakyReLU(0.2)(x)
-    # x = Dropout(0.3)(x)
-
     x = Conv2D(128, (4, 4), strides=(2, 2), padding='same', kernel_initializer=init)(x)
-    # x = LayerNormalization()(x)
     x = LeakyReLU(0.2)(x)
-    # x = Dropout(0.3)(x)
-
     x = Conv2D(128, (4, 4), strides=(2, 2), padding='same', kernel_initializer=init)(x)
-    # x = LayerNormalization()(x)
     x = LeakyReLU(0.2)(x)
-    # x = Dropout(0.3)(x)
-
     x = Conv2D(256, (4, 4), strides=(2, 2), padding='same', kernel_initializer=init)(x)
-    # x = LayerNormalization()(x)
     x = LeakyReLU(0.2)(x)
-    # x = Dropout(0.3)(x)
-
     x = Flatten()(x)
-
     le = Flatten()(Embedding(n_classes, 512)(label))
     le = Dense(4 * 4 * 256)(le)
     le = LeakyReLU(0.2)(le)
     x_y = multiply([x, le])
     x_y = Dense(512)(x_y)
-
     out = Dense(1)(x_y)
 
     model = Model(inputs=[img, label], outputs=out)
-
     return model
 
 # %% ----------------------------------- BAGAN-GP Part -----------------------------------------------------------------
@@ -507,21 +366,16 @@ def generator_loss(fake_logits):
 
 # build generator with pretrained decoder and embedding
 def generator_label(embedding, decoder):
-    # # Embedding model needs to be trained along with GAN training
-    # embedding.trainable = False
-
     label = Input((1,), dtype='int32')
     latent = Input((latent_dim,))
 
     labeled_latent = embedding([latent, label])
     gen_img = decoder(labeled_latent)
     model = Model([latent, label], gen_img)
-
     return model
 
 # Build discriminator with pre-trained Encoder
 def build_discriminator(encoder):
-
     label = Input((1,), dtype='int32')
     img = Input(img_size)
 
@@ -533,16 +387,12 @@ def build_discriminator(encoder):
     le = LeakyReLU(0.2)(le)
     x_y = multiply([x, le])
     x_y = Dense(512)(x_y)
-
     out = Dense(1)(x_y)
 
     model = Model(inputs=[img, label], outputs=out)
-
     return model
 
-
 # %% ----------------------------------- Compile Models ----------------------------------------------------------------
-# d_model = build_discriminator(en)  # initialized with Encoder
 d_model = discriminator_cwgan()  # without initialization
 g_model = generator_label(em, de)  # initialized with Decoder and Embedding
 
@@ -566,14 +416,13 @@ bagan_gp.compile(
 # Plot/save generated images through training
 def plt_img(generator, epoch):
     np.random.seed(42)
-    latent_gen = np.random.normal(size=(n_classes, latent_dim)) # GABRIEL: (3, 128)
+    latent_gen = np.random.normal(size=(n_classes, latent_dim))
 
-    x_real = x_test * 0.5 + 0.5 #GABRIEL: x_test is the test set
+    x_real = x_test * 0.5 + 0.5
     n = n_classes
     class_names=["covid_19","no_findings","pneumonia"]
 
     plt.figure(figsize=(2*n, 2*(n+1)))
-    #plt.figure(figsize=(2*n, 2*2*(n+1))) # GABRIEL
     for i in range(n):
         # display original
         ax = plt.subplot(n+1, n, i + 1)
@@ -604,54 +453,69 @@ def plt_img(generator, epoch):
     plt.show()
     return
 
-# make directory to store results
-#os.system('mkdir -p bagan_gp_results')
-try:
-  os.mkdir("bagan_gp_results")
-except:
-  print("directory was previously created")
+def generate_samples(generator_path, sample_size, images_file, labels_file):
+  generator = generator_path
+  real_imgs = images_file
+  real_label = labels_file
+
+  n_classes = len(np.unique(real_label))
+  class_names=["covid_19","no_findings","pneumonia"]
+  samples_generated = [None for i in class_names]
+  
+  for c in range(n_classes):
+    ########### get generated samples by class ###########
+    label = np.ones(sample_size) * c
+    noise = np.random.normal(0, 1, (sample_size, generator.input_shape[0][1]))
+    samples_generated[c] = generator.predict([noise, label])
+    samples_generated[c] = samples_generated[c]*0.5 + 0.5
+  return samples_generated
+
+def plot_images(n_row, n_col, images, epoch=5):
+  class_names=["normal","lung_opacity"]
+  fig, ax = plt.subplots(n_row, n_col, figsize=(16, 16))
+  fig.subplots_adjust(hspace=-0.80, wspace=0.1)
+  for i in range(n_row):
+      for j in range(n_col):
+          ax[i, j].get_xaxis().set_visible(False)
+          ax[i, j].get_yaxis().set_visible(False)
+          ax[i, j].imshow(images[i][j])
+          ax[i, j].title.set_text( "fake: \n {}".format(class_names[i]) )
+  fig.savefig('bagan_gp_results/generated_plot_%d.png' % epoch)
+  plt.show()
+  return
+
+def plot_loss_curve(epoch):
+  plt.plot(d_loss_history, label='D')
+  plt.plot(g_loss_history, label='G')
+  plt.legend()
+  plt.savefig('bagan_gp_results/loss_step_%d.png'%epoch)
+  plt.show()
+  return
 
 # Record the loss
 d_loss_history = []
 g_loss_history = []
 
 ############################# Start training #############################
-LEARNING_STEPS = 50
+LEARNING_STEPS = 30 # Achtung! Best results are with 100.
 for learning_step in range(LEARNING_STEPS):
     print('LEARNING STEP # ', learning_step + 1, '-' * 50)
     bagan_gp.fit(x_train, y_train, batch_size=128, epochs=2)
     d_loss_history += bagan_gp.history.history['d_loss']
     g_loss_history += bagan_gp.history.history['g_loss']
-    #wandb.log({"train_disc_loss":bagan_gp.history.history['d_loss']})
-    #wandb.log({"train_gen_loss": bagan_gp.history.history['g_loss']})
 
     if (learning_step+1)%1 == 0:
-        plt_img(bagan_gp.generator, learning_step)
-        img_str = "bagan_gp_results/generated_plot_"+str(learning_step)+".png"
-        wandb.log({"example": wandb.Image(img_str)})
-
+      #samples = generate_samples(bagan_gp.generator, 10, x_test, y_test)
+      #plot_images(2, 10, samples, learning_step)
+      plt_img(bagan_gp.generator, learning_step)
+      img_str = "bagan_gp_results/generated_plot_"+str(learning_step)+".png"
+      plot_loss_curve(learning_step)
 ############################# Display performance #############################
-# plot loss of G and D
 plt.plot(d_loss_history, label='Discriminator')
 plt.plot(g_loss_history, label='Generator')
 plt.legend()
 plt.savefig('bagan_gp_results/plot_losses.png')
-
-# save gif
-import imageio
-ims = []
-for i in range(LEARNING_STEPS):
-    fname = 'generated_plot_%d.png' % i
-    dir = 'bagan_gp_results/'
-    if fname in os.listdir(dir):
-        print('loading png...', i)
-        im = imageio.imread(dir + fname, 'png')
-        ims.append(im)
-#print('saving as gif...')
-#imageio.mimsave(dir + 'training_demo.gif', ims, fps=3)
+############################# Save Results #############################
 bagan_gp.generator.save('bagan_gp_results/my_generator.h5')
 en.save('bagan_gp_results/my_encoder.h5')
 em.save('bagan_gp_results/my_embedding.h5')
-# en = load_model('bagan_gp_encoder.h5')
-# em = load_model('bagan_gp_embedding.h5')
-# de = load_model('bagan_gp_decoder.h5')
